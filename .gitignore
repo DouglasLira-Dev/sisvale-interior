@@ -1,0 +1,22 @@
+# MAVEN
+target/
+
+# IDEs
+.idea/
+*iml/
+.vscode/
+.classpath
+.project
+.settings/
+
+# DATABASE
+database/*.db
+database/*.db-journal
+
+# LOGS
+*.log
+logs/
+
+# SYSTEM FILES
+.DS_Store
+Tumbs.db
