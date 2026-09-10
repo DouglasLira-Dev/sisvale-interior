@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Propriedades do log -->
+    <property name="LOG_DIR"     value="logs"/>
+    <property name="LOG_FILE"    value="${LOG_DIR}/sisvale.log"/>
+    <property name="APP_NAME"    value="sisvale-interior"/>
+
+    <!-- Pattern legível: data | nível | thread | classe:linha | mensagem -->
+    <property name="CONSOLE_PATTERN"
+            value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}:%line) - %msg%n"/>
+
+    <!-- Arquivo: sem cores, com classe completa, facilita grep -->
+    <property name="FILE_PATTERN"
+            value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{50}:%line - %msg%n"/>
+
+    <!-- Appender para console -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Appender para arquivo com rotação diária e tamanho máximo -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+
+        <!-- Política de rotação: diário e tamanho máximo -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- ex.: logs/sisvale.2026-09-10.0.log.gz -->
+            <fileNamePattern>${LOG_DIR}/sisvale.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Silenciar logs de bibliotecas -->
+    <logger name="org.sqlite" level="WARN"/>
+    <logger name="com.formdev.flatlaf" level="WARN"/>
+
+    <!-- Logger da aplicação em DEBUG no arquivo, INFO no console -->
+    <logger name="dev.douglaslira.sisvale" level="DEBUG"/>
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>
