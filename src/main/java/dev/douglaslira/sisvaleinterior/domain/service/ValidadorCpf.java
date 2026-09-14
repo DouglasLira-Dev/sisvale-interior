@@ -1,8 +1,8 @@
 package dev.douglaslira.sisvaleinterior.domain.service;
 
 // Classe utilitária para validação de CPF
-public final class ValidatorCpf {
-    private ValidatorCpf() {
+public final class ValidadorCpf {
+    private ValidadorCpf() {
         // classe utilitária - não deve ser instanciada
     }
 
@@ -65,5 +65,10 @@ public final class ValidatorCpf {
         }
         int resto = soma % 11; // Calcula o resto da divisão da soma por 11
         return (resto < 2) ? 0 : 11 - resto; // Retorna o dígito verificador calculado
+    }
+
+    public static boolean isValid(String cpf) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isValid'");
     }
 }
