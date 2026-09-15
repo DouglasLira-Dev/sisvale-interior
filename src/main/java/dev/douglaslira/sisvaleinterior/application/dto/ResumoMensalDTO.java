@@ -53,13 +53,13 @@ public record ResumoMensalDTO(
                 .toList();
 
         int totalValidos = (int) dias.stream()
-                .filter(d -> d.status() == DiaResumoDTO.StatusDia.VALIDO)
+                .filter(d -> d.status() == StatusDia.VALIDO)
                 .count();
         int totalParciais = (int) dias.stream()
-                .filter(d -> d.status() == DiaResumoDTO.StatusDia.PARCIAL)
+                .filter(d -> d.status() == StatusDia.PARCIAL)
                 .count();
         int totalInvalidos = (int) dias.stream()
-                .filter(d -> d.status() == DiaResumoDTO.StatusDia.INVALIDO)
+                .filter(d -> d.status() == StatusDia.INVALIDO)
                 .count();
 
         return new ResumoMensalDTO(
@@ -97,17 +97,6 @@ public record ResumoMensalDTO(
             long diferencaVoltaMinutos
     ) {
 
-        /**
-         * Status consolidado do dia, derivado dos pares de validação.
-         */
-        public enum StatusDia {
-            /** Ida e volta válidos. */
-            VALIDO,
-            /** Exatamente um dos pares válido. */
-            PARCIAL,
-            /** Nenhum par válido. */
-            INVALIDO
-        }
 
         /**
          * Converte um {@link ResultadoDia} em {@link DiaResumoDTO}.

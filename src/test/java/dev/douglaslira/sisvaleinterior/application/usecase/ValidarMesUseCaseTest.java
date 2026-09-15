@@ -1,15 +1,19 @@
 package dev.douglaslira.sisvaleinterior.application.usecase;
 
 import dev.douglaslira.sisvaleinterior.application.dto.ResumoMensalDTO;
+import dev.douglaslira.sisvaleinterior.application.dto.StatusDia;
 import dev.douglaslira.sisvaleinterior.application.exception.ApplicationException;
+
 import dev.douglaslira.sisvaleinterior.domain.model.Horario;
 import dev.douglaslira.sisvaleinterior.domain.model.Lancamento;
 import dev.douglaslira.sisvaleinterior.domain.model.Servidor;
 import dev.douglaslira.sisvaleinterior.domain.service.CalculadoraRessarcimento;
+
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.ConnectionFactory;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.DatabaseInitializer;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.LancamentoRepositoryJdbc;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.ServidorRepositoryJdbc;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -194,7 +198,7 @@ class ValidarMesUseCaseTest {
 
             assertThat(resumo.dias())
                     .extracting(ResumoMensalDTO.DiaResumoDTO::status)
-                    .containsOnly(ResumoMensalDTO.DiaResumoDTO.StatusDia.VALIDO);
+                    .containsOnly(StatusDia.VALIDO);
         }
     }
 
@@ -232,13 +236,13 @@ class ValidarMesUseCaseTest {
 
             assertThat(resumo.dias()).hasSize(4);
             assertThat(resumo.dias().get(0).status())
-                    .isEqualTo(ResumoMensalDTO.DiaResumoDTO.StatusDia.VALIDO);
+                    .isEqualTo(StatusDia.VALIDO);
             assertThat(resumo.dias().get(1).status())
-                    .isEqualTo(ResumoMensalDTO.DiaResumoDTO.StatusDia.PARCIAL);
+                    .isEqualTo(StatusDia.PARCIAL);
             assertThat(resumo.dias().get(2).status())
-                    .isEqualTo(ResumoMensalDTO.DiaResumoDTO.StatusDia.PARCIAL);
+                    .isEqualTo(StatusDia.PARCIAL);
             assertThat(resumo.dias().get(3).status())
-                    .isEqualTo(ResumoMensalDTO.DiaResumoDTO.StatusDia.INVALIDO);
+                    .isEqualTo(StatusDia.INVALIDO);
         }
 
         @Test
