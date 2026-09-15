@@ -196,6 +196,14 @@ public class TelaRelatorio extends JPanel {
         botaoGerar.addActionListener(listener);
     }
 
+    public void adicionarListenerServidorMudou(ActionListener listener) {
+        comboServidor.addActionListener(listener);
+    }
+
+    public void adicionarListenerMesMudou(ActionListener listener) {
+        comboMes.addActionListener(listener);
+    }
+
     public void mostrarMensagem(String titulo, String mensagem) {
         JOptionPane.showMessageDialog(this, mensagem, titulo, JOptionPane.INFORMATION_MESSAGE);
     }
