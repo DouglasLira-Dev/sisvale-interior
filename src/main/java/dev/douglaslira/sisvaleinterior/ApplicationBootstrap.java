@@ -1,6 +1,7 @@
 package dev.douglaslira.sisvaleinterior;
 
 import dev.douglaslira.sisvaleinterior.application.usecase.CadastrarServidorUseCase;
+import dev.douglaslira.sisvaleinterior.application.usecase.DesativarServidorUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarLancamentosUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarServidoresUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.RegistrarLancamentoUseCase;
@@ -84,16 +85,22 @@ public class ApplicationBootstrap {
         CalculadoraRessarcimento calculadora = new CalculadoraRessarcimento(validador);
 
         CadastrarServidorUseCase cadastrarServidor = new CadastrarServidorUseCase(servidorRepo);
+
+        DesativarServidorUseCase desativarServidor = new DesativarServidorUseCase(servidorRepo);
+
         ListarServidoresUseCase listarServidores = new ListarServidoresUseCase(servidorRepo);
+
         RegistrarLancamentoUseCase registrarLancamento =
                 new RegistrarLancamentoUseCase(lancamentoRepo, servidorRepo);
         ListarLancamentosUseCase listarLancamentos =
                 new ListarLancamentosUseCase(lancamentoRepo, calculadora);
+
         ValidarMesUseCase validarMes =
                 new ValidarMesUseCase(lancamentoRepo, servidorRepo, calculadora);
 
         SwingUtilities.invokeLater(() -> montarJanela(
                 cadastrarServidor,
+                desativarServidor,
                 listarServidores,
                 registrarLancamento,
                 listarLancamentos,
@@ -105,6 +112,7 @@ public class ApplicationBootstrap {
      * Cria views, controllers e a janela principal — tudo na EDT.
      */
     private void montarJanela(CadastrarServidorUseCase cadastrarServidor,
+        DesativarServidorUseCase desativarServidor,
                             ListarServidoresUseCase listarServidores,
                             RegistrarLancamentoUseCase registrarLancamento,
                             ListarLancamentosUseCase listarLancamentos,
@@ -116,7 +124,7 @@ public class ApplicationBootstrap {
 
         // Controllers registram listeners nas views e ficam ativos enquanto
         // as views existirem. A referência é descartada de propósito.
-        new ServidorController(telaServidores, cadastrarServidor, listarServidores);
+        new ServidorController(telaServidores, cadastrarServidor, listarServidores, desativarServidor);
 
         LancamentoController lancamentoController = new LancamentoController(telaLancamentos,
                 registrarLancamento, listarServidores, listarLancamentos);
