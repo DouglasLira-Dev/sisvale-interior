@@ -103,7 +103,7 @@ public final class RelatorioController {
         view.setMesSelecionado(atual);
     }
 
-    private void carregarServidores() {
+    public void carregarServidores() {
         try {
             List<ServidorDTO> servidores = listarServidores.executar();
             view.popularComboServidores(servidores);

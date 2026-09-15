@@ -154,7 +154,7 @@ public final class LancamentoController {
         }
     }
 
-    private void carregarServidores() {
+    public void carregarServidores() {
         populando = true;
         try {
             List<ServidorDTO> servidores = listarServidores.executarApenasAtivos();

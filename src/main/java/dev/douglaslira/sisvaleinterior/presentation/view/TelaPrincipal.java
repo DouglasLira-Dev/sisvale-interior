@@ -4,6 +4,7 @@ import dev.douglaslira.sisvaleinterior.infrastructure.config.AppConfig;
 
 import javax.swing.JFrame;
 import javax.swing.JTabbedPane;
+import javax.swing.event.ChangeListener;
 import java.awt.Dimension;
 
 /**
@@ -57,11 +58,16 @@ public class TelaPrincipal extends JFrame {
         setMinimumSize(new Dimension(LARGURA_MINIMA, ALTURA_MINIMA));
         setLocationRelativeTo(null);
 
-        JTabbedPane abas = new JTabbedPane();
         abas.addTab(TITULO_ABA_SERVIDORES, telaServidores);
         abas.addTab(TITULO_ABA_LANCAMENTOS, telaLancamentos);
         abas.addTab(TITULO_ABA_RELATORIO, telaRelatorio);
 
         setContentPane(abas);
     }
+
+    private final JTabbedPane abas = new JTabbedPane();
+
+    public void adicionarListenerMudancaAba(ChangeListener listener) {
+    abas.addChangeListener(listener);
+}
 }

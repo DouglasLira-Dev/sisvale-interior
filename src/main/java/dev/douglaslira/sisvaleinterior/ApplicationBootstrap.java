@@ -117,14 +117,19 @@ public class ApplicationBootstrap {
         // Controllers registram listeners nas views e ficam ativos enquanto
         // as views existirem. A referência é descartada de propósito.
         new ServidorController(telaServidores, cadastrarServidor, listarServidores);
-        new LancamentoController(telaLancamentos, registrarLancamento,
-                listarServidores, listarLancamentos);
-        new RelatorioController(telaRelatorio, listarServidores, validarMes);
+
+        LancamentoController lancamentoController = new LancamentoController(telaLancamentos,
+                registrarLancamento, listarServidores, listarLancamentos);
+                
+        RelatorioController relatorioController = new RelatorioController(telaRelatorio,
+                listarServidores, validarMes);
 
         TelaPrincipal janela = new TelaPrincipal(telaServidores, telaLancamentos, telaRelatorio);
+        janela.adicionarListenerMudancaAba(e -> {
+            lancamentoController.carregarServidores();
+            relatorioController.carregarServidores();
+        });
         janela.setVisible(true);
-
-        log.info("Aplicação iniciada.");
     }
 
     // Erro fatal
