@@ -194,6 +194,49 @@ class ServidorRepositoryJdbcTest {
         }
     }
 
+    // Buscar por CPF
+    @Nested
+    @DisplayName("Buscar por CPF")
+    class BuscarPorCpf {
+
+        @Test
+        @DisplayName("CPF existente devolve servidor correto")
+        void cpfExistenteDevolveServidor() {
+            repository.salvar(servidorPadrao());
+
+            Optional<Servidor> encontrado = repository.buscarPorCpf("11144477735");
+
+            assertThat(encontrado).isPresent();
+            assertThat(encontrado.get().nome()).isEqualTo("João Silva");
+        }
+
+        @Test
+        @DisplayName("CPF existente com máscara também encontra (normalização)")
+        void cpfComMascaraTambemEncontra() {
+            repository.salvar(servidorPadrao());
+
+            Optional<Servidor> encontrado = repository.buscarPorCpf("111.444.777-35");
+
+            assertThat(encontrado).isPresent();
+            assertThat(encontrado.get().matricula()).isEqualTo("M001");
+        }
+
+        @Test
+        @DisplayName("CPF inexistente devolve Optional.empty()")
+        void cpfInexistenteDevolveVazio() {
+            Optional<Servidor> encontrado = repository.buscarPorCpf("52998224725");
+
+            assertThat(encontrado).isEmpty();
+        }
+
+        @Test
+        @DisplayName("CPF nulo lança IllegalArgumentException")
+        void cpfNuloLancaExcecao() {
+            assertThatThrownBy(() -> repository.buscarPorCpf(null))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
     // Listar todos
     @Nested
     @DisplayName("Listar todos")

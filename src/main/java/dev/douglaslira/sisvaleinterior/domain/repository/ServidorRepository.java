@@ -38,6 +38,12 @@ public interface ServidorRepository {
     Optional<Servidor> buscarPorMatricula(String matricula);
 
     /**
+     * @param cpf CPF no formato puro (11 dígitos) ou com máscara
+     * @return o servidor, se existir
+     */
+    Optional<Servidor> buscarPorCpf(String cpf);
+
+    /**
      * @return todos os servidores cadastrados (ativos e inativos)
      */
     List<Servidor> listarTodos();

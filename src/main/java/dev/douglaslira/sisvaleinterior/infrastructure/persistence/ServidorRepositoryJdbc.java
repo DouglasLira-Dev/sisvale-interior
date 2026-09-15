@@ -2,6 +2,7 @@ package dev.douglaslira.sisvaleinterior.infrastructure.persistence;
 
 import dev.douglaslira.sisvaleinterior.domain.model.Servidor;
 import dev.douglaslira.sisvaleinterior.domain.repository.ServidorRepository;
+import dev.douglaslira.sisvaleinterior.domain.service.ValidadorCpf;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.exception.PersistenceException;
 
 import java.sql.Connection;
@@ -45,6 +46,12 @@ public final class ServidorRepositoryJdbc implements ServidorRepository {
             SELECT id, nome, matricula, cpf, ativo
             FROM servidor
             WHERE matricula = ?
+            """;
+
+    private static final String SQL_SELECT_POR_CPF = """
+            SELECT id, nome, matricula, cpf, ativo
+            FROM servidor
+            WHERE cpf = ?
             """;
 
     private static final String SQL_SELECT_TODOS = """
@@ -127,6 +134,26 @@ public final class ServidorRepositoryJdbc implements ServidorRepository {
 
         } catch (SQLException e) {
             throw new PersistenceException("Erro ao buscar servidor por matrícula: " + matricula, e);
+        }
+    }
+
+    @Override
+    public Optional<Servidor> buscarPorCpf(String cpf) {
+        if (cpf == null || cpf.isBlank()) {
+            throw new IllegalArgumentException("CPF é obrigatório");
+        }
+
+        try (Connection conn = connectionFactory.getConnection();
+            PreparedStatement ps = conn.prepareStatement(SQL_SELECT_POR_CPF)) {
+
+            ps.setString(1, ValidadorCpf.normalizar(cpf));   // ← normaliza
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Optional.of(mapear(rs)) : Optional.empty();
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Erro ao buscar servidor por CPF", e);
         }
     }
 
