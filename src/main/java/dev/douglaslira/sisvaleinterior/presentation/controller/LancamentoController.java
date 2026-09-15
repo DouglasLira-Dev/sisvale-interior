@@ -157,7 +157,7 @@ public final class LancamentoController {
     private void carregarServidores() {
         populando = true;
         try {
-            List<ServidorDTO> servidores = listarServidores.executar();
+            List<ServidorDTO> servidores = listarServidores.executarApenasAtivos();
             view.popularComboServidores(servidores);
         } catch (ApplicationException e) {
             view.mostrarErro("Erro ao carregar servidores: " + e.getMessage());
