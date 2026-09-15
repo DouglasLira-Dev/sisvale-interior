@@ -1,7 +1,9 @@
 package dev.douglaslira.sisvaleinterior.presentation.view;
 
+import dev.douglaslira.sisvaleinterior.application.dto.LancamentoComStatusDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.LancamentoDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.StatusDia;
+
 import javax.swing.table.AbstractTableModel;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
@@ -11,8 +13,11 @@ import java.util.List;
 /**
  * Modelo de tabela para exibir lançamentos diários com status e total.
  *
- * <p>Cada linha combina {@link LancamentoDTO} + {@link StatusDia} + o total
- * do dia (já calculado pelo domínio via {@code ResultadoDia}).</p>
+ * <p>Cada linha é um {@link LancamentoComStatusDTO} — que combina o
+ * lançamento com o {@link StatusDia} e o total calculado pelo domínio.</p>
+ *
+ * <p>A coluna "Status" exibe o {@link StatusDia} como valor da célula; a
+ * tela aplica o {@code StatusCellRenderer} nessa coluna.</p>
  */
 public class LancamentoTableModel extends AbstractTableModel {
 
@@ -26,7 +31,7 @@ public class LancamentoTableModel extends AbstractTableModel {
     /** Índice da coluna Status — usado pela tela para aplicar o renderer. */
     public static final int COLUNA_STATUS = 8;
 
-    private List<LinhaLancamento> linhas = new ArrayList<>();
+    private List<LancamentoComStatusDTO> linhas = new ArrayList<>();
 
     @Override
     public int getRowCount() {
@@ -53,7 +58,7 @@ public class LancamentoTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        LinhaLancamento linha = linhas.get(rowIndex);
+        LancamentoComStatusDTO linha = linhas.get(rowIndex);
         LancamentoDTO dto = linha.lancamento();
 
         return switch (columnIndex) {
@@ -77,8 +82,10 @@ public class LancamentoTableModel extends AbstractTableModel {
 
     /**
      * Substitui o conteúdo da tabela.
+     *
+     * @param novasLinhas lista de DTOs com status (não pode ser nula)
      */
-    public void atualizar(List<LinhaLancamento> novasLinhas) {
+    public void atualizar(List<LancamentoComStatusDTO> novasLinhas) {
         this.linhas = new ArrayList<>(novasLinhas);
         fireTableDataChanged();
     }
@@ -100,16 +107,5 @@ public class LancamentoTableModel extends AbstractTableModel {
             return "";
         }
         return valor.toPlainString().replace('.', ',');
-    }
-
-    /**
-     * Linha completa exibida na tabela: dados do lançamento, status
-     * consolidado e o total do dia (já calculado pelo domínio).
-     *
-     * @param lancamento dados do lançamento
-     * @param status     status consolidado do dia
-     * @param total      valor a ressarcir no dia (0.00 se inválido)
-     */
-    public record LinhaLancamento(LancamentoDTO lancamento, StatusDia status, BigDecimal total) {
     }
 }

@@ -1,6 +1,8 @@
 package dev.douglaslira.sisvaleinterior.presentation.view;
 
 import dev.douglaslira.sisvaleinterior.application.dto.ServidorDTO;
+import dev.douglaslira.sisvaleinterior.application.dto.LancamentoComStatusDTO;
+
 import dev.douglaslira.sisvaleinterior.presentation.component.ButtonFactory;
 import dev.douglaslira.sisvaleinterior.presentation.component.CurrencyField;
 import dev.douglaslira.sisvaleinterior.presentation.component.DateField;
@@ -275,7 +277,7 @@ public class TelaLancamento extends JPanel {
         }
     }
 
-    public void popularTabela(List<LancamentoTableModel.LinhaLancamento> linhas) {
+    public void popularTabela(List<LancamentoComStatusDTO> linhas) {
         modeloTabela.atualizar(linhas);
     }
 
