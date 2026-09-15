@@ -58,8 +58,8 @@ public class TelaLancamento extends JPanel {
     private final CurrencyField campoValorVolta = new CurrencyField();
 
     private final JButton botaoSalvar = ButtonFactory.criarSalvar();
+    private final JButton botaoExcluir = ButtonFactory.criarExcluir();
     private final JButton botaoCancelar = ButtonFactory.criarCancelar();
-
     // Tabela
     private final LancamentoTableModel modeloTabela = new LancamentoTableModel();
     private final JTable tabela = new JTable(modeloTabela);
@@ -73,6 +73,8 @@ public class TelaLancamento extends JPanel {
 
         configurarRenderers();
     }
+
+    
 
     // Montagem
     private JPanel montarFiltros() {
@@ -154,6 +156,7 @@ public class TelaLancamento extends JPanel {
         c.fill = GridBagConstraints.NONE;
         JPanel painelBotoes = new JPanel(new FlowLayout(FlowLayout.CENTER, GAP, 0));
         painelBotoes.add(botaoSalvar);
+        painelBotoes.add(botaoExcluir);
         painelBotoes.add(botaoCancelar);
         painel.add(painelBotoes, c);
 
@@ -204,6 +207,26 @@ public class TelaLancamento extends JPanel {
                 return this;
             }
         });
+    }
+    // API 
+    public dev.douglaslira.sisvaleinterior.application.dto.LancamentoDTO getLancamentoSelecionado() {
+        int linhaView = tabela.getSelectedRow();
+        if (linhaView < 0) {
+            return null;
+        }
+        int linhaModel = tabela.convertRowIndexToModel(linhaView);
+        return modeloTabela.getLancamento(linhaModel);
+    }
+
+    public void adicionarListenerExcluir(ActionListener listener) {
+        botaoExcluir.addActionListener(listener);
+    }
+
+    public boolean confirmar(String mensagem) {
+        int resposta = JOptionPane.showConfirmDialog(
+                this, mensagem, "Confirmação",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        return resposta == JOptionPane.YES_OPTION;
     }
 
     // API para o controller

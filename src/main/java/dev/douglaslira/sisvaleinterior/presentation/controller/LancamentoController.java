@@ -1,11 +1,13 @@
 package dev.douglaslira.sisvaleinterior.presentation.controller;
 
 import dev.douglaslira.sisvaleinterior.application.dto.LancamentoComStatusDTO;
+import dev.douglaslira.sisvaleinterior.application.dto.LancamentoDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.ServidorDTO;
 import dev.douglaslira.sisvaleinterior.application.exception.ApplicationException;
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarLancamentosUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarServidoresUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.RegistrarLancamentoUseCase;
+import dev.douglaslira.sisvaleinterior.application.usecase.RemoverLancamentoUseCase;
 import dev.douglaslira.sisvaleinterior.presentation.view.TelaLancamento;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +37,7 @@ public final class LancamentoController {
 
     private final TelaLancamento view;
     private final RegistrarLancamentoUseCase registrar;
+    private final RemoverLancamentoUseCase remover;
     private final ListarServidoresUseCase listarServidores;
     private final ListarLancamentosUseCase listarLancamentos;
 
@@ -55,7 +58,8 @@ public final class LancamentoController {
     public LancamentoController(TelaLancamento view,
                                 RegistrarLancamentoUseCase registrar,
                                 ListarServidoresUseCase listarServidores,
-                                ListarLancamentosUseCase listarLancamentos) {
+                                ListarLancamentosUseCase listarLancamentos,
+                                RemoverLancamentoUseCase remover ) {
         if (view == null) {
             throw new IllegalArgumentException("Tela é obrigatória");
         }
@@ -68,14 +72,20 @@ public final class LancamentoController {
         if (listarLancamentos == null) {
             throw new IllegalArgumentException("ListarLancamentosUseCase é obrigatório");
         }
+        if (remover == null) {
+            throw new IllegalArgumentException("RemoverLancamentoUseCase é obrigatório");
+        }
+
 
         this.view = view;
         this.registrar = registrar;
+        this.remover = remover;
         this.listarServidores = listarServidores;
         this.listarLancamentos = listarLancamentos;
 
         // Listeners registrados UMA vez — a flag `populando` protege contra reentrância.
         view.adicionarListenerSalvar(e -> onSalvar());
+        view.adicionarListenerExcluir(e -> onExcluir());
         view.adicionarListenerCancelar(e -> view.limparFormulario());
         view.adicionarListenerServidorMudou(e -> onServidorMudou());
         view.adicionarListenerMesMudou(e -> onMesMudou());
@@ -87,9 +97,7 @@ public final class LancamentoController {
         carregarLancamentos();
     }
 
-    // =====================================================================
     // Ações
-    // =====================================================================
 
     private void onServidorMudou() {
         if (populando) {
@@ -135,10 +143,28 @@ public final class LancamentoController {
         }
     }
 
-    // =====================================================================
-    // Carregamentos
-    // =====================================================================
+    private void onExcluir() {
+    LancamentoDTO selecionado = view.getLancamentoSelecionado();
+        if (selecionado == null) {
+            view.mostrarErro("Selecione um lançamento na tabela.");
+            return;
+        }
+        if (!view.confirmar("Excluir o lançamento de " + selecionado.data() + "?")) {
+            return;
+        }
+        try {
+            remover.executar(selecionado.id());
+            carregarLancamentos();
+            view.mostrarMensagem("Sucesso", "Lançamento excluído.");
+        } catch (ApplicationException e) {
+            view.mostrarErro(e.getMessage());
+        } catch (RuntimeException e) {
+            log.error("Erro inesperado ao excluir lançamento", e);
+            view.mostrarErro("Erro inesperado ao excluir lançamento. Consulte o log.");
+        }
+    }
 
+    // Carregamentos
     private void carregarMeses() {
         populando = true;
         try {

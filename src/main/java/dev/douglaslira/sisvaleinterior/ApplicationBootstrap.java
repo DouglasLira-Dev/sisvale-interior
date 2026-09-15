@@ -5,6 +5,7 @@ import dev.douglaslira.sisvaleinterior.application.usecase.DesativarServidorUseC
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarLancamentosUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarServidoresUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.RegistrarLancamentoUseCase;
+import dev.douglaslira.sisvaleinterior.application.usecase.RemoverLancamentoUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ValidarMesUseCase;
 import dev.douglaslira.sisvaleinterior.domain.repository.LancamentoRepository;
 import dev.douglaslira.sisvaleinterior.domain.repository.ServidorRepository;
@@ -92,6 +93,9 @@ public class ApplicationBootstrap {
 
         RegistrarLancamentoUseCase registrarLancamento =
                 new RegistrarLancamentoUseCase(lancamentoRepo, servidorRepo);
+
+        RemoverLancamentoUseCase removerLancamento = new RemoverLancamentoUseCase(lancamentoRepo);
+        
         ListarLancamentosUseCase listarLancamentos =
                 new ListarLancamentosUseCase(lancamentoRepo, calculadora);
 
@@ -104,7 +108,8 @@ public class ApplicationBootstrap {
                 listarServidores,
                 registrarLancamento,
                 listarLancamentos,
-                validarMes
+                validarMes,
+                removerLancamento
         ));
     }
 
@@ -116,7 +121,7 @@ public class ApplicationBootstrap {
                             ListarServidoresUseCase listarServidores,
                             RegistrarLancamentoUseCase registrarLancamento,
                             ListarLancamentosUseCase listarLancamentos,
-                            ValidarMesUseCase validarMes) {
+                            ValidarMesUseCase validarMes, RemoverLancamentoUseCase removerLancamento) {
 
         TelaCadastroServidor telaServidores = new TelaCadastroServidor();
         TelaLancamento telaLancamentos = new TelaLancamento();
@@ -127,7 +132,7 @@ public class ApplicationBootstrap {
         new ServidorController(telaServidores, cadastrarServidor, listarServidores, desativarServidor);
 
         LancamentoController lancamentoController = new LancamentoController(telaLancamentos,
-                registrarLancamento, listarServidores, listarLancamentos);
+                registrarLancamento, listarServidores, listarLancamentos, removerLancamento);
                 
         RelatorioController relatorioController = new RelatorioController(telaRelatorio,
                 listarServidores, validarMes);
