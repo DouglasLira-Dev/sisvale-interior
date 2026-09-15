@@ -38,7 +38,7 @@ public class TelaRelatorio extends JPanel {
 
     private static final int GAP = 8;
     private static final DateTimeFormatter FORMATO_MES =
-            DateTimeFormatter.ofPattern("MMMM/yyyy", new Locale("pt", "BR"));
+            DateTimeFormatter.ofPattern("MMMM/yyyy", Locale.of("pt", "BR"));
 
     // Filtros
     private final JComboBox<ServidorDTO> comboServidor = new JComboBox<>();

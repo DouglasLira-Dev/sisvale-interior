@@ -67,7 +67,7 @@ public class ApplicationBootstrap {
 
     // Ambiente — antes de qualquer Swing
     private void prepararAmbiente() {
-        Locale.setDefault(new Locale("pt", "BR"));
+        Locale.setDefault(Locale.of("pt", "BR"));
         DarkTheme.aplicar();
     }
 
