@@ -5,6 +5,7 @@ import dev.douglaslira.sisvaleinterior.application.exception.ApplicationExceptio
 import dev.douglaslira.sisvaleinterior.application.usecase.CadastrarServidorUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.DesativarServidorUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarServidoresUseCase;
+import dev.douglaslira.sisvaleinterior.application.usecase.RemoverServidorUseCase;
 import dev.douglaslira.sisvaleinterior.presentation.view.TelaCadastroServidor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ public final class ServidorController {
     private final CadastrarServidorUseCase cadastrar;
     private final ListarServidoresUseCase listar;
     private final DesativarServidorUseCase desativar;
+    private final RemoverServidorUseCase remover;
 
     /**
      * @param view      tela de cadastro (não pode ser nula)
@@ -38,7 +40,8 @@ public final class ServidorController {
     public ServidorController(TelaCadastroServidor view,
                             CadastrarServidorUseCase cadastrar,
                             ListarServidoresUseCase listar,
-                            DesativarServidorUseCase desativar) {
+                            DesativarServidorUseCase desativar,
+                            RemoverServidorUseCase remover) {
         if (view == null) {
             throw new IllegalArgumentException("Tela é obrigatória");
         }
@@ -51,13 +54,18 @@ public final class ServidorController {
         if (desativar == null) {
             throw new IllegalArgumentException("DesativarServidorUseCase é obrigatório");
         }
+        if (remover == null ){
+            throw new IllegalArgumentException("RemoverServidorUseCase é obrigatório");
+        }
 
         this.view = view;
         this.cadastrar = cadastrar;
         this.listar = listar;
         this.desativar = desativar;
+        this.remover = remover;
 
         view.adicionarListenerSalvar(e -> onSalvar());
+        view.adicionarListenerDesativar(e -> onDesativar());
         view.adicionarListenerExcluir(e -> onExcluir());
         view.adicionarListenerCancelar(e -> view.limparFormulario());
 
@@ -99,24 +107,46 @@ public final class ServidorController {
         }
     }
 
+    private void onDesativar() {
+        ServidorDTO selecionado = view.getServidorSelecionado();
+        if (selecionado == null) {
+            view.mostrarErro("Selecione um servidor na tabela.");
+            return;
+        }
+        if (!view.confirmar("Desativar o servidor " + selecionado.nome() + "?")) {
+            return;
+        }
+        try {
+            desativar.executar(selecionado.id());
+            carregarServidores();
+            view.mostrarMensagem("Sucesso", "Servidor desativado.");
+        } catch (ApplicationException e) {
+            view.mostrarErro(e.getMessage());
+        } catch (RuntimeException e) {
+            log.error("Erro inesperado ao desativar servidor", e);
+            view.mostrarErro("Erro inesperado ao desativar servidor. Consulte o log.");
+        }
+    }
+
     private void onExcluir() {
-    ServidorDTO selecionado = view.getServidorSelecionado();
-    if (selecionado == null) {
-        view.mostrarErro("Selecione um servidor na tabela.");
-        return;
+        ServidorDTO selecionado = view.getServidorSelecionado();
+        if (selecionado == null) {
+            view.mostrarErro("Selecione um servidor na tabela.");
+            return;
+        }
+        if (!view.confirmar("Excluir definitivamente o servidor "
+                + selecionado.nome() + "? Essa ação não pode ser desfeita.")) {
+            return;
+        }
+        try {
+            remover.executar(selecionado.id());
+            carregarServidores();
+            view.mostrarMensagem("Sucesso", "Servidor excluído.");
+        } catch (ApplicationException e) {
+            view.mostrarErro(e.getMessage());
+        } catch (RuntimeException e) {
+            log.error("Erro inesperado ao excluir servidor", e);
+            view.mostrarErro("Erro inesperado ao excluir servidor. Consulte o log.");
+        }
     }
-    if (!view.confirmar("Excluir (desativar) o servidor " + selecionado.nome() + "?")) {
-        return;
-    }
-    try {
-        desativar.executar(selecionado.id());
-        carregarServidores();
-        view.mostrarMensagem("Sucesso", "Servidor desativado.");
-    } catch (ApplicationException e) {
-        view.mostrarErro(e.getMessage());
-    } catch (RuntimeException e) {
-        log.error("Erro inesperado ao excluir servidor", e);
-        view.mostrarErro("Erro inesperado ao excluir servidor. Consulte o log.");
-    }
-}
 }

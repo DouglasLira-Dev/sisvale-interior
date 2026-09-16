@@ -73,6 +73,11 @@ public final class ServidorRepositoryJdbc implements ServidorRepository {
             WHERE id = ?
             """;
 
+    private static final String SQL_DELETE = """
+            DELETE FROM servidor
+            WHERE id = ?
+            """;
+
     private final ConnectionFactory connectionFactory;
 
     /**
@@ -136,7 +141,7 @@ public final class ServidorRepositoryJdbc implements ServidorRepository {
             throw new PersistenceException("Erro ao buscar servidor por matrícula: " + matricula, e);
         }
     }
-
+    // Buscar por CPF
     @Override
     public Optional<Servidor> buscarPorCpf(String cpf) {
         if (cpf == null || cpf.isBlank()) {
@@ -190,6 +195,28 @@ public final class ServidorRepositoryJdbc implements ServidorRepository {
             throw new PersistenceException("Erro ao desativar servidor: id=" + id, e);
         }
     }
+
+    @Override
+    public void remover(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Id é obrigatório");
+        }
+
+        try (Connection conn = connectionFactory.getConnection();
+            PreparedStatement ps = conn.prepareStatement(SQL_DELETE)) {
+
+            ps.setLong(1, id);
+
+            int linhas = ps.executeUpdate();
+            if (linhas == 0) {
+                throw new PersistenceException("Servidor não encontrado para remover: id=" + id);
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Erro ao remover servidor: id=" + id, e);
+        }
+    }
+
     // Métodos privados
     /**
      * Insere um novo servidor e recupera o id gerado.

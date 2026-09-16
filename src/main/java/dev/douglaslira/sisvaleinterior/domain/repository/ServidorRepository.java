@@ -61,4 +61,13 @@ public interface ServidorRepository {
      * @param id identificador do servidor a desativar
      */
     void desativar(Long id);
+
+    /**
+     * Remove definitivamente o servidor do banco. diferente de 
+     * {@link #desativar(Long)}, apaga a linha, por FK ON DELETE CASCADE,
+     * todos os lançamentos associados.
+     * 
+     * @param id identificador do servidor a remover.
+     */
+    void remover(Long id);
 }

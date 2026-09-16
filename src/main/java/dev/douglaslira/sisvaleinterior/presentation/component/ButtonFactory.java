@@ -47,6 +47,13 @@ public final class ButtonFactory {
     }
 
     /**
+     * Botão "Desativar" com atalho {@code alt+D}.
+     */
+    public static JButton criarDesativar(){
+        return configurar("Desativar", "Desativar (alt+D)", KeyEvent.VK_D);
+    }
+
+    /**
      * Botão "Cancelar" com atalho {@code Esc}.
      *
      * <p>O atalho {@code Esc} é registrado em {@code WHEN_IN_FOCUSED_WINDOW}:

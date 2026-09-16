@@ -6,6 +6,7 @@ import dev.douglaslira.sisvaleinterior.application.usecase.ListarLancamentosUseC
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarServidoresUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.RegistrarLancamentoUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.RemoverLancamentoUseCase;
+import dev.douglaslira.sisvaleinterior.application.usecase.RemoverServidorUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ValidarMesUseCase;
 import dev.douglaslira.sisvaleinterior.domain.repository.LancamentoRepository;
 import dev.douglaslira.sisvaleinterior.domain.repository.ServidorRepository;
@@ -89,6 +90,8 @@ public class ApplicationBootstrap {
 
         DesativarServidorUseCase desativarServidor = new DesativarServidorUseCase(servidorRepo);
 
+        RemoverServidorUseCase removerServidor = new RemoverServidorUseCase(servidorRepo, lancamentoRepo);
+
         ListarServidoresUseCase listarServidores = new ListarServidoresUseCase(servidorRepo);
 
         RegistrarLancamentoUseCase registrarLancamento =
@@ -109,7 +112,8 @@ public class ApplicationBootstrap {
                 registrarLancamento,
                 listarLancamentos,
                 validarMes,
-                removerLancamento
+                removerLancamento,
+                removerServidor
         ));
     }
 
@@ -121,7 +125,8 @@ public class ApplicationBootstrap {
                             ListarServidoresUseCase listarServidores,
                             RegistrarLancamentoUseCase registrarLancamento,
                             ListarLancamentosUseCase listarLancamentos,
-                            ValidarMesUseCase validarMes, RemoverLancamentoUseCase removerLancamento) {
+                            ValidarMesUseCase validarMes, RemoverLancamentoUseCase removerLancamento,
+                            RemoverServidorUseCase removerServidor) {
 
         TelaCadastroServidor telaServidores = new TelaCadastroServidor();
         TelaLancamento telaLancamentos = new TelaLancamento();
@@ -129,7 +134,7 @@ public class ApplicationBootstrap {
 
         // Controllers registram listeners nas views e ficam ativos enquanto
         // as views existirem. A referência é descartada de propósito.
-        new ServidorController(telaServidores, cadastrarServidor, listarServidores, desativarServidor);
+        new ServidorController(telaServidores, cadastrarServidor, listarServidores, desativarServidor, removerServidor);
 
         LancamentoController lancamentoController = new LancamentoController(telaLancamentos,
                 registrarLancamento, listarServidores, listarLancamentos, removerLancamento);

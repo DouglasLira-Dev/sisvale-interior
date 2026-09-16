@@ -40,6 +40,7 @@ public class TelaCadastroServidor extends JPanel {
     private final JButton botaoSalvar = ButtonFactory.criarSalvar();
     private final JButton botaoCancelar = ButtonFactory.criarCancelar();
     private final JButton botaoExcluir = ButtonFactory.criarExcluir();
+    private final JButton botaoDesativar = ButtonFactory.criarDesativar();
 
     public TelaCadastroServidor() {
         setLayout(new BorderLayout(GAP, GAP));
@@ -94,6 +95,7 @@ public class TelaCadastroServidor extends JPanel {
     private JPanel montarBotoes() {
         JPanel painel = new JPanel();
         painel.add(botaoSalvar);
+        painel.add(botaoDesativar);
         painel.add(botaoExcluir);
         painel.add(botaoCancelar);
         return painel;
@@ -150,6 +152,10 @@ public class TelaCadastroServidor extends JPanel {
 
     public void adicionarListenerExcluir(ActionListener listener) {
         botaoExcluir.addActionListener(listener);
+    }
+
+    public void adicionarListenerDesativar(ActionListener listener) {
+        botaoDesativar.addActionListener(listener);
     }
 
     public void adicionarListenerCancelar(ActionListener listener) {
