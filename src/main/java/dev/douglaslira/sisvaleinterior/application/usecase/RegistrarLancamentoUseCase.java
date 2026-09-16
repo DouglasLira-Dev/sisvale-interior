@@ -1,24 +1,24 @@
 package dev.douglaslira.sisvaleinterior.application.usecase;
 
 import dev.douglaslira.sisvaleinterior.application.dto.LancamentoDTO;
+import dev.douglaslira.sisvaleinterior.application.dto.TrechoDTO;
 import dev.douglaslira.sisvaleinterior.application.exception.ApplicationException;
 import dev.douglaslira.sisvaleinterior.domain.exception.HorarioInvalidoException;
-import dev.douglaslira.sisvaleinterior.domain.model.Horario;
 import dev.douglaslira.sisvaleinterior.domain.model.Lancamento;
+import dev.douglaslira.sisvaleinterior.domain.model.Trecho;
 import dev.douglaslira.sisvaleinterior.domain.repository.LancamentoRepository;
 import dev.douglaslira.sisvaleinterior.domain.repository.ServidorRepository;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.exception.PersistenceException;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Caso de uso: registrar um lançamento diário de servidor.
  *
  * <p>Não aplica a regra de tolerância de 15 minutos — apenas registra.
  * A validação é feita em separado pelo cálculo mensal
- * ({@code CalcularMesUseCase}).</p>
+ * ({@code ValidarMesUseCase}).</p>
  *
  * <p>Exceções do domínio e da persistência são convertidas em
  * {@link ApplicationException} — a UI só precisa capturar essa.</p>
@@ -46,49 +46,38 @@ public final class RegistrarLancamentoUseCase {
     }
 
     /**
-     * Registra um lançamento diário.
+     * Registra um lançamento diário com N trechos.
      *
-     * @param servidorId  id do servidor (obrigatório)
-     * @param data        data do lançamento (obrigatória)
-     * @param horaDescida horário de descida do ônibus na ida
-     * @param horaEntrada horário de entrada na unidade na ida
-     * @param valorIda    valor pago na ida
-     * @param horaSaida   horário de saída da unidade na volta
-     * @param horaOnibus  horário do ônibus na volta
-     * @param valorVolta  valor pago na volta
+     * @param servidorId id do servidor (obrigatório)
+     * @param data       data do lançamento (obrigatória)
+     * @param trechos    lista de trechos (não pode ser nula nem vazia)
      * @return DTO do lançamento registrado
      * @throws ApplicationException se a entrada for inválida, o servidor não existir,
      *                              houver duplicidade, ou falhar a persistência
      */
     public LancamentoDTO executar(Long servidorId,
                                 LocalDate data,
-                                LocalTime horaDescida,
-                                LocalTime horaEntrada,
-                                BigDecimal valorIda,
-                                LocalTime horaSaida,
-                                LocalTime horaOnibus,
-                                BigDecimal valorVolta) {
+                                List<TrechoDTO> trechos) {
 
-        validarEntrada(servidorId, data);
+        validarEntrada(servidorId, data, trechos);
         verificarServidorExiste(servidorId);
         verificarDuplicidade(servidorId, data);
 
-        Lancamento lancamento = criarLancamento(
-                servidorId, data,
-                horaDescida, horaEntrada, valorIda,
-                horaSaida, horaOnibus, valorVolta);
-
+        Lancamento lancamento = criarLancamento(servidorId, data, trechos);
         Lancamento salvo = persistir(lancamento);
         return LancamentoDTO.de(salvo);
     }
 
     // Passos
-    private void validarEntrada(Long servidorId, LocalDate data) {
+    private void validarEntrada(Long servidorId, LocalDate data, List<TrechoDTO> trechos) {
         if (servidorId == null) {
             throw new ApplicationException("Servidor é obrigatório");
         }
         if (data == null) {
             throw new ApplicationException("Data é obrigatória");
+        }
+        if (trechos == null || trechos.isEmpty()) {
+            throw new ApplicationException("Informe pelo menos um trecho");
         }
     }
 
@@ -114,29 +103,18 @@ public final class RegistrarLancamentoUseCase {
         }
     }
 
-    private Lancamento criarLancamento(Long servidorId,
-                                    LocalDate data,
-                                    LocalTime horaDescida,
-                                    LocalTime horaEntrada,
-                                    BigDecimal valorIda,
-                                    LocalTime horaSaida,
-                                    LocalTime horaOnibus,
-                                    BigDecimal valorVolta) {
+    private Lancamento criarLancamento(Long servidorId, LocalDate data, List<TrechoDTO> trechosDTO) {
         try {
-            return new Lancamento(
-                    null, servidorId, data,
-                    paraHorario(horaDescida), paraHorario(horaEntrada), valorIda,
-                    paraHorario(horaSaida), paraHorario(horaOnibus), valorVolta
-            );
+            List<Trecho> trechos = trechosDTO.stream()
+                    .map(TrechoDTO::paraDominio)
+                    .toList();
+            return new Lancamento(null, servidorId, data, trechos);
+
         } catch (HorarioInvalidoException e) {
             throw new ApplicationException("Horário inválido: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
             throw new ApplicationException("Dados do lançamento inválidos: " + e.getMessage(), e);
         }
-    }
-
-    private static Horario paraHorario(LocalTime hora) {
-        return hora == null ? null : new Horario(hora);
     }
 
     private Lancamento persistir(Lancamento lancamento) {
