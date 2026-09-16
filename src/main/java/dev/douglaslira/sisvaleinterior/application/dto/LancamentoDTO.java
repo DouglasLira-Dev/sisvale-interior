@@ -1,31 +1,26 @@
 package dev.douglaslira.sisvaleinterior.application.dto;
 
 import dev.douglaslira.sisvaleinterior.domain.model.Lancamento;
+import dev.douglaslira.sisvaleinterior.domain.model.Trecho;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.util.List;
 
 /**
- * DTO de leitura de {@link Lancamento} para a UI.
+ * DTO de leitura e escrita de {@link Lancamento} entre a UI e o domínio.
  *
- * <p>Mantém os tipos do domínio ({@link LocalDate}, {@link LocalTime},
- * {@link BigDecimal}) — sem formatação. A UI decide como exibir cada um.</p>
+ * <p>Carrega os dados básicos do lançamento (id, servidor, data) e a
+ * <strong>lista de trechos</strong> — cada trecho com seus horários e valor.</p>
  *
- * <p>Diferente do {@code ServidorDTO}, <strong>não</strong> há mascaramento:
- * os dados de lançamento não são sensíveis por LGPD. Apenas a formatação
- * visual fica a cargo da UI.</p>
+ * <p>Não inclui status nem valor total — isso fica no
+ * {@link LancamentoComStatusDTO}, que combina este DTO com o resultado da
+ * validação.</p>
  */
 public record LancamentoDTO(
         Long id,
         Long servidorId,
         LocalDate data,
-        LocalTime horaDescida,
-        LocalTime horaEntrada,
-        BigDecimal valorIda,
-        LocalTime horaSaida,
-        LocalTime horaOnibus,
-        BigDecimal valorVolta
+        List<TrechoDTO> trechos
 ) {
 
     /**
@@ -39,16 +34,37 @@ public record LancamentoDTO(
         if (lancamento == null) {
             throw new IllegalArgumentException("Lançamento é obrigatório");
         }
+
+        List<TrechoDTO> trechosDTO = lancamento.trechos().stream()
+                .map(TrechoDTO::de)
+                .toList();
+
         return new LancamentoDTO(
                 lancamento.id(),
                 lancamento.servidorId(),
                 lancamento.data(),
-                lancamento.horaDescida() == null ? null : lancamento.horaDescida().valor(),
-                lancamento.horaEntrada() == null ? null : lancamento.horaEntrada().valor(),
-                lancamento.valorIda(),
-                lancamento.horaSaida() == null ? null : lancamento.horaSaida().valor(),
-                lancamento.horaOnibus() == null ? null : lancamento.horaOnibus().valor(),
-                lancamento.valorVolta()
+                trechosDTO
         );
+    }
+
+    /**
+     * Converte este DTO para um {@link Lancamento} do domínio.
+     *
+     * <p>O construtor do {@link Lancamento} valida os invariantes (nulos,
+     * lista não vazia). Cada trecho é convertido via
+     * {@link TrechoDTO#paraDominio()}.</p>
+     *
+     * @return lançamento de domínio
+     * @throws IllegalArgumentException se algum campo obrigatório for nulo
+     *                                  ou a lista de trechos estiver vazia
+     */
+    public Lancamento paraDominio() {
+        List<Trecho> trechosDominio = trechos == null
+                ? List.of()
+                : trechos.stream()
+                        .map(TrechoDTO::paraDominio)
+                        .toList();
+
+        return new Lancamento(id, servidorId, data, trechosDominio);
     }
 }
