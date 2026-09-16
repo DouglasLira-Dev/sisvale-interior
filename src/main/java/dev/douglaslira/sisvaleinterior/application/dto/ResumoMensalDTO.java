@@ -2,7 +2,6 @@ package dev.douglaslira.sisvaleinterior.application.dto;
 
 import dev.douglaslira.sisvaleinterior.domain.model.ResultadoDia;
 import dev.douglaslira.sisvaleinterior.domain.model.ResultadoMes;
-import dev.douglaslira.sisvaleinterior.domain.model.ResultadoValidacao;
 import dev.douglaslira.sisvaleinterior.domain.model.Servidor;
 
 import java.math.BigDecimal;
@@ -14,8 +13,8 @@ import java.util.List;
  * DTO rico de leitura para a UI exibir o resumo de um mês.
  *
  * <p>Contém tudo que a tela precisa para renderizar sem calcular nada:
- * totais, contadores e a lista detalhada de dias. A UI só percorre e
- * desenha.</p>
+ * totais, contadores e a lista detalhada de dias (cada dia com seus
+ * trechos validados). A UI só percorre e desenha.</p>
  *
  * <p><strong>LGPD:</strong> não expõe CPF. O nome do servidor é o suficiente
  * para identificar no relatório.</p>
@@ -75,28 +74,20 @@ public record ResumoMensalDTO(
         );
     }
 
-    // =====================================================================
     // DTO aninhado: dia individual do mês
-    // =====================================================================
-
     /**
      * Representação de um dia no resumo mensal.
      *
-     * <p>Já traz o {@link StatusDia} pronto — a UI não precisa recalcular
-     * booleanos como {@code totalmenteValido()}. Os motivos e diferenças
-     * em minutos permitem exibir mensagens como
-     * "16 min fora da tolerância" sem reconsultar o domínio.</p>
+     * <p>Já traz o {@link StatusDia} agregado do dia e a lista de resultados
+     * por trecho — a UI pode renderizar cada trecho com seu veredito
+     * individual sem reconsultar o domínio.</p>
      */
     public record DiaResumoDTO(
             LocalDate data,
             StatusDia status,
-            BigDecimal valor,
-            String motivoIda,
-            long diferencaIdaMinutos,
-            String motivoVolta,
-            long diferencaVoltaMinutos
+            BigDecimal valorTotalDia,
+            List<ResultadoTrechoDTO> resultados
     ) {
-
 
         /**
          * Converte um {@link ResultadoDia} em {@link DiaResumoDTO}.
@@ -110,17 +101,15 @@ public record ResumoMensalDTO(
                 throw new IllegalArgumentException("ResultadoDia é obrigatório");
             }
 
-            ResultadoValidacao ida = dia.validacaoIda();
-            ResultadoValidacao volta = dia.validacaoVolta();
+            List<ResultadoTrechoDTO> resultados = dia.resultados().stream()
+                    .map(ResultadoTrechoDTO::de)
+                    .toList();
 
             return new DiaResumoDTO(
                     dia.data(),
                     calcularStatus(dia),
                     dia.valorTotalDia(),
-                    ida.motivo(),
-                    ida.diferencaMinutos(),
-                    volta.motivo(),
-                    volta.diferencaMinutos()
+                    resultados
             );
         }
 
