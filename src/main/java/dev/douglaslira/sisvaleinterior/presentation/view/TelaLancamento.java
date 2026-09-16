@@ -1,13 +1,14 @@
 package dev.douglaslira.sisvaleinterior.presentation.view;
 
-import dev.douglaslira.sisvaleinterior.application.dto.ServidorDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.LancamentoComStatusDTO;
-
+import dev.douglaslira.sisvaleinterior.application.dto.LancamentoDTO;
+import dev.douglaslira.sisvaleinterior.application.dto.ResultadoTrechoDTO;
+import dev.douglaslira.sisvaleinterior.application.dto.ServidorDTO;
+import dev.douglaslira.sisvaleinterior.application.dto.TrechoDTO;
 import dev.douglaslira.sisvaleinterior.presentation.component.ButtonFactory;
-import dev.douglaslira.sisvaleinterior.presentation.component.CurrencyField;
 import dev.douglaslira.sisvaleinterior.presentation.component.DateField;
 import dev.douglaslira.sisvaleinterior.presentation.component.StatusCellRenderer;
-import dev.douglaslira.sisvaleinterior.presentation.component.TimeField;
+import dev.douglaslira.sisvaleinterior.presentation.component.StatusTrechoCellRenderer;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
@@ -18,15 +19,17 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import java.awt.Font;
 import java.awt.event.ActionListener;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -37,6 +40,10 @@ import java.util.Locale;
  *
  * <p>View pura: não conhece use cases nem repositórios. Expõe métodos para o
  * controller manipular e listeners para reagir a mudanças.</p>
+ *
+ * <p>Duas tabelas: uma <strong>editável</strong> para montar os trechos do
+ * novo lançamento; outra <strong>somente leitura</strong> para listar os
+ * lançamentos do mês selecionado.</p>
  */
 public class TelaLancamento extends JPanel {
 
@@ -48,21 +55,21 @@ public class TelaLancamento extends JPanel {
     private final JComboBox<ServidorDTO> comboServidor = new JComboBox<>();
     private final JComboBox<YearMonth> comboMes = new JComboBox<>();
 
-    // Formulário
+    // Formulário — data + tabela de trechos editável
     private final DateField campoData = new DateField();
-    private final TimeField campoDescida = new TimeField();
-    private final TimeField campoEntrada = new TimeField();
-    private final CurrencyField campoValorIda = new CurrencyField();
-    private final TimeField campoSaida = new TimeField();
-    private final TimeField campoOnibus = new TimeField();
-    private final CurrencyField campoValorVolta = new CurrencyField();
+    private final TrechoTableModel modeloTrechos = new TrechoTableModel();
+    private final JTable tabelaTrechos = new JTable(modeloTrechos);
 
+    private final JButton botaoAdicionarTrecho = ButtonFactory.criarAdicionarTrecho();
+    private final JButton botaoRemoverTrecho = ButtonFactory.criarRemoverTrecho();
     private final JButton botaoSalvar = ButtonFactory.criarSalvar();
-    private final JButton botaoExcluir = ButtonFactory.criarExcluir();
     private final JButton botaoCancelar = ButtonFactory.criarCancelar();
-    // Tabela
-    private final LancamentoTableModel modeloTabela = new LancamentoTableModel();
-    private final JTable tabela = new JTable(modeloTabela);
+
+    private final JLabel labelTotalDia = new JLabel("Total do dia: R$ 0,00");
+
+    // Tabela principal — lançamentos do mês
+    private final LancamentoTableModel modeloLancamentos = new LancamentoTableModel();
+    private final JTable tabelaLancamentos = new JTable(modeloLancamentos);
 
     public TelaLancamento() {
         setLayout(new BorderLayout(GAP, GAP));
@@ -72,9 +79,8 @@ public class TelaLancamento extends JPanel {
         add(montarCentro(), BorderLayout.CENTER);
 
         configurarRenderers();
+        configurarEstilo();
     }
-
-    
 
     // Montagem
     private JPanel montarFiltros() {
@@ -89,91 +95,80 @@ public class TelaLancamento extends JPanel {
         return painel;
     }
 
-    private JPanel montarCentro() {
-        JPanel painel = new JPanel(new BorderLayout(GAP, GAP));
-        painel.add(montarFormulario(), BorderLayout.NORTH);
-        painel.add(montarTabela(), BorderLayout.CENTER);
-        return painel;
+    private JSplitPane montarCentro() {
+        JPanel painelFormulario = montarFormulario();
+        JPanel painelListagem = montarListagem();
+
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
+                painelFormulario, painelListagem);
+        split.setResizeWeight(0.5);
+        split.setBorder(null);
+        return split;
     }
 
     private JPanel montarFormulario() {
-        JPanel painel = new JPanel(new GridBagLayout());
+        JPanel painel = new JPanel(new BorderLayout(GAP, GAP));
         painel.setBorder(BorderFactory.createTitledBorder("Novo lançamento"));
 
-        GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(4, 4, 4, 4);
-        c.anchor = GridBagConstraints.WEST;
-        c.fill = GridBagConstraints.HORIZONTAL;
+        // Data
+        JPanel painelData = new JPanel(new FlowLayout(FlowLayout.LEFT, GAP, 0));
+        painelData.add(new JLabel("Data:"));
+        painelData.add(campoData);
+        painel.add(painelData, BorderLayout.NORTH);
 
-        // Linha 1 — Ida
-        c.gridy = 0;
-        c.gridx = 0; c.weightx = 0;
-        painel.add(new JLabel("Data:"), c);
-        c.gridx = 1; c.weightx = 0;
-        painel.add(campoData, c);
+        // Tabela de trechos
+        tabelaTrechos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tabelaTrechos.setFillsViewportHeight(true);
+        tabelaTrechos.setRowHeight(24);
+        tabelaTrechos.getColumnModel()
+                .getColumn(TrechoTableModel.COLUNA_STATUS)
+                .setCellRenderer(new StatusTrechoCellRenderer());
 
-        c.gridx = 2;
-        painel.add(new JLabel("Descida:"), c);
-        c.gridx = 3;
-        painel.add(campoDescida, c);
+        painel.add(new JScrollPane(tabelaTrechos), BorderLayout.CENTER);
 
-        c.gridx = 4;
-        painel.add(new JLabel("Entrada:"), c);
-        c.gridx = 5;
-        painel.add(campoEntrada, c);
-
-        c.gridx = 6;
-        painel.add(new JLabel("Valor ida:"), c);
-        c.gridx = 7;
-        painel.add(campoValorIda, c);
-
-        // Linha 2 — Volta
-        c.gridy = 1;
-        c.gridx = 0;
-        painel.add(new JLabel(""), c);   // alinhamento
-        c.gridx = 1;
-        painel.add(new JLabel(""), c);
-        c.gridx = 2;
-        painel.add(new JLabel("Saída:"), c);
-        c.gridx = 3;
-        painel.add(campoSaida, c);
-
-        c.gridx = 4;
-        painel.add(new JLabel("Ônibus:"), c);
-        c.gridx = 5;
-        painel.add(campoOnibus, c);
-
-        c.gridx = 6;
-        painel.add(new JLabel("Valor volta:"), c);
-        c.gridx = 7;
-        painel.add(campoValorVolta, c);
-
-        // Linha 3 — botões
-        c.gridy = 2;
-        c.gridx = 0;
-        c.gridwidth = 8;
-        c.anchor = GridBagConstraints.CENTER;
-        c.fill = GridBagConstraints.NONE;
-        JPanel painelBotoes = new JPanel(new FlowLayout(FlowLayout.CENTER, GAP, 0));
-        painelBotoes.add(botaoSalvar);
-        painelBotoes.add(botaoExcluir);
-        painelBotoes.add(botaoCancelar);
-        painel.add(painelBotoes, c);
-
+        // Rodapé
+        painel.add(montarRodapeFormulario(), BorderLayout.SOUTH);
         return painel;
     }
 
-    private JScrollPane montarTabela() {
-        tabela.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        tabela.setFillsViewportHeight(true);
-        tabela.setAutoCreateRowSorter(true);
-        tabela.setRowHeight(24);
+    private JPanel montarRodapeFormulario() {
+        JPanel painel = new JPanel(new BorderLayout(GAP, GAP));
 
-        tabela.getColumnModel()
+        // Linha 1 — botões de trecho + total
+        JPanel linha1 = new JPanel(new BorderLayout(GAP, 0));
+        JPanel botoesTrecho = new JPanel(new FlowLayout(FlowLayout.LEFT, GAP, 0));
+        botoesTrecho.add(botaoAdicionarTrecho);
+        botoesTrecho.add(botaoRemoverTrecho);
+        linha1.add(botoesTrecho, BorderLayout.WEST);
+
+        JPanel painelTotal = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        painelTotal.add(labelTotalDia);
+        linha1.add(painelTotal, BorderLayout.EAST);
+
+        // Linha 2 — ações principais
+        JPanel linha2 = new JPanel(new FlowLayout(FlowLayout.CENTER, GAP, 0));
+        linha2.add(botaoSalvar);
+        linha2.add(botaoCancelar);
+
+        painel.add(linha1, BorderLayout.NORTH);
+        painel.add(linha2, BorderLayout.SOUTH);
+        return painel;
+    }
+
+    private JPanel montarListagem() {
+        JPanel painel = new JPanel(new BorderLayout());
+        painel.setBorder(BorderFactory.createTitledBorder("Lançamentos do mês"));
+
+        tabelaLancamentos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tabelaLancamentos.setFillsViewportHeight(true);
+        tabelaLancamentos.setAutoCreateRowSorter(true);
+        tabelaLancamentos.setRowHeight(24);
+        tabelaLancamentos.getColumnModel()
                 .getColumn(LancamentoTableModel.COLUNA_STATUS)
                 .setCellRenderer(new StatusCellRenderer());
 
-        return new JScrollPane(tabela);
+        painel.add(new JScrollPane(tabelaLancamentos), BorderLayout.CENTER);
+        return painel;
     }
 
     private void configurarRenderers() {
@@ -208,25 +203,10 @@ public class TelaLancamento extends JPanel {
             }
         });
     }
-    // API 
-    public dev.douglaslira.sisvaleinterior.application.dto.LancamentoDTO getLancamentoSelecionado() {
-        int linhaView = tabela.getSelectedRow();
-        if (linhaView < 0) {
-            return null;
-        }
-        int linhaModel = tabela.convertRowIndexToModel(linhaView);
-        return modeloTabela.getLancamento(linhaModel);
-    }
 
-    public void adicionarListenerExcluir(ActionListener listener) {
-        botaoExcluir.addActionListener(listener);
-    }
-
-    public boolean confirmar(String mensagem) {
-        int resposta = JOptionPane.showConfirmDialog(
-                this, mensagem, "Confirmação",
-                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        return resposta == JOptionPane.YES_OPTION;
+    private void configurarEstilo() {
+        labelTotalDia.setFont(labelTotalDia.getFont().deriveFont(Font.BOLD, 16f));
+        labelTotalDia.setHorizontalAlignment(SwingConstants.RIGHT);
     }
 
     // API para o controller
@@ -243,46 +223,50 @@ public class TelaLancamento extends JPanel {
         comboMes.setSelectedItem(mes);
     }
 
-    public String getData() {
-        return campoData.getText();
-    }
-
-    public java.time.LocalDate getDataComoLocalDate() {
+    public LocalDate getData() {
         return campoData.getData();
     }
 
-    public java.time.LocalTime getHoraDescida() {
-        return campoDescida.getTime();
+    public void setData(LocalDate data) {
+        campoData.setData(data);
     }
 
-    public java.time.LocalTime getHoraEntrada() {
-        return campoEntrada.getTime();
+    public List<TrechoDTO> getTrechos() {
+        return modeloTrechos.getTrechos();
     }
 
-    public java.math.BigDecimal getValorIda() {
-        return campoValorIda.getValor();
+    public void adicionarTrecho() {
+        modeloTrechos.adicionarLinhaVazia();
     }
 
-    public java.time.LocalTime getHoraSaida() {
-        return campoSaida.getTime();
+    public void removerTrechoSelecionado() {
+        int linhaView = tabelaTrechos.getSelectedRow();
+        if (linhaView < 0) {
+            return;
+        }
+        int linhaModel = tabelaTrechos.convertRowIndexToModel(linhaView);
+        modeloTrechos.removerLinha(linhaModel);
     }
 
-    public java.time.LocalTime getHoraOnibus() {
-        return campoOnibus.getTime();
+    public void atualizarStatusTrecho(int rowIndex, ResultadoTrechoDTO resultado) {
+        modeloTrechos.atualizarResultado(rowIndex, resultado);
     }
 
-    public java.math.BigDecimal getValorVolta() {
-        return campoValorVolta.getValor();
+    public void atualizarTotalDia(BigDecimal valor) {
+        String texto = valor == null
+                ? "0,00"
+                : valor.toPlainString().replace('.', ',');
+        labelTotalDia.setText("Total do dia: R$ " + texto);
+    }
+
+    public TrechoTableModel getModeloTrechos() {
+        return modeloTrechos;
     }
 
     public void limparFormulario() {
         campoData.setText("");
-        campoDescida.setText("");
-        campoEntrada.setText("");
-        campoValorIda.setText("");
-        campoSaida.setText("");
-        campoOnibus.setText("");
-        campoValorVolta.setText("");
+        modeloTrechos.limpar();
+        atualizarTotalDia(BigDecimal.ZERO);
         campoData.requestFocusInWindow();
     }
 
@@ -300,16 +284,34 @@ public class TelaLancamento extends JPanel {
         }
     }
 
-    public void popularTabela(List<LancamentoComStatusDTO> linhas) {
-        modeloTabela.atualizar(linhas);
+    public void popularTabelaLancamentos(List<LancamentoComStatusDTO> linhas) {
+        modeloLancamentos.atualizar(linhas);
     }
 
+    public LancamentoDTO getLancamentoSelecionado() {
+        int linhaView = tabelaLancamentos.getSelectedRow();
+        if (linhaView < 0) {
+            return null;
+        }
+        int linhaModel = tabelaLancamentos.convertRowIndexToModel(linhaView);
+        return modeloLancamentos.getLancamento(linhaModel);
+    }
+
+    // Listeners
     public void adicionarListenerSalvar(ActionListener listener) {
         botaoSalvar.addActionListener(listener);
     }
 
     public void adicionarListenerCancelar(ActionListener listener) {
         botaoCancelar.addActionListener(listener);
+    }
+
+    public void adicionarListenerAdicionarTrecho(ActionListener listener) {
+        botaoAdicionarTrecho.addActionListener(listener);
+    }
+
+    public void adicionarListenerRemoverTrecho(ActionListener listener) {
+        botaoRemoverTrecho.addActionListener(listener);
     }
 
     public void adicionarListenerServidorMudou(ActionListener listener) {
@@ -320,11 +322,19 @@ public class TelaLancamento extends JPanel {
         comboMes.addActionListener(listener);
     }
 
+    // Diálogos
     public void mostrarMensagem(String titulo, String mensagem) {
         JOptionPane.showMessageDialog(this, mensagem, titulo, JOptionPane.INFORMATION_MESSAGE);
     }
 
     public void mostrarErro(String mensagem) {
         JOptionPane.showMessageDialog(this, mensagem, "Erro", JOptionPane.ERROR_MESSAGE);
+    }
+
+    public boolean confirmar(String mensagem) {
+        int resposta = JOptionPane.showConfirmDialog(
+                this, mensagem, "Confirmação",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        return resposta == JOptionPane.YES_OPTION;
     }
 }

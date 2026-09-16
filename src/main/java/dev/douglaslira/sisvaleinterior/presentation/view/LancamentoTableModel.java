@@ -11,25 +11,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Modelo de tabela para exibir lançamentos diários com status e total.
+ * Modelo de tabela para exibir os lançamentos do mês — <strong>uma linha
+ * por lançamento</strong> (resumo por dia).
  *
- * <p>Cada linha é um {@link LancamentoComStatusDTO} — que combina o
- * lançamento com o {@link StatusDia} e o total calculado pelo domínio.</p>
+ * <p>Cada linha é um {@link LancamentoComStatusDTO}, que combina o
+ * lançamento com o status agregado do dia e o valor total calculado pelo
+ * domínio.</p>
  *
- * <p>A coluna "Status" exibe o {@link StatusDia} como valor da célula; a
- * tela aplica o {@code StatusCellRenderer} nessa coluna.</p>
+ * <p>Para ver os trechos individuais, consulte a tela de Relatório —
+ * aqui o foco é o panorama do mês.</p>
  */
 public class LancamentoTableModel extends AbstractTableModel {
 
     private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm");
 
     private static final String[] COLUNAS = {
-            "Data", "Descida", "Entrada", "Ida (R$)", "Saída", "Ônibus", "Volta (R$)", "Total", "Status"
+            "Data", "Qtd. trechos", "Total (R$)", "Status"
     };
 
     /** Índice da coluna Status — usado pela tela para aplicar o renderer. */
-    public static final int COLUNA_STATUS = 8;
+    public static final int COLUNA_STATUS = 3;
 
     private List<LancamentoComStatusDTO> linhas = new ArrayList<>();
 
@@ -50,10 +51,13 @@ public class LancamentoTableModel extends AbstractTableModel {
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
-        if (columnIndex == COLUNA_STATUS) {
-            return StatusDia.class;
-        }
-        return String.class;
+        return switch (columnIndex) {
+            case 0 -> String.class;
+            case 1 -> Integer.class;
+            case 2 -> String.class;
+            case 3 -> StatusDia.class;
+            default -> Object.class;
+        };
     }
 
     @Override
@@ -63,14 +67,9 @@ public class LancamentoTableModel extends AbstractTableModel {
 
         return switch (columnIndex) {
             case 0 -> dto.data() == null ? "" : dto.data().format(FORMATO_DATA);
-            case 1 -> dto.horaDescida() == null ? "" : dto.horaDescida().format(FORMATO_HORA);
-            case 2 -> dto.horaEntrada() == null ? "" : dto.horaEntrada().format(FORMATO_HORA);
-            case 3 -> formatarValor(dto.valorIda());
-            case 4 -> dto.horaSaida() == null ? "" : dto.horaSaida().format(FORMATO_HORA);
-            case 5 -> dto.horaOnibus() == null ? "" : dto.horaOnibus().format(FORMATO_HORA);
-            case 6 -> formatarValor(dto.valorVolta());
-            case 7 -> formatarValor(linha.total());
-            case 8 -> linha.status();
+            case 1 -> dto.trechos() == null ? 0 : dto.trechos().size();
+            case 2 -> formatarValor(linha.valorTotalDia());
+            case 3 -> linha.status();
             default -> null;
         };
     }

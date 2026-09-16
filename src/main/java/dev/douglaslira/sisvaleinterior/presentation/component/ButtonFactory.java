@@ -53,6 +53,14 @@ public final class ButtonFactory {
         return configurar("Desativar", "Desativar (alt+D)", KeyEvent.VK_D);
     }
 
+    public static JButton criarAdicionarTrecho() {
+        return configurar("Adicionar trecho", "Adicionar trecho (Alt+T", KeyEvent.VK_R);
+    }
+
+    public static JButton criarRemoverTrecho() {
+        return configurar("Remover trecho", "Remover trecho selecionado (Alt+R)", KeyEvent.VK_R);
+    }
+
     /**
      * Botão "Cancelar" com atalho {@code Esc}.
      *

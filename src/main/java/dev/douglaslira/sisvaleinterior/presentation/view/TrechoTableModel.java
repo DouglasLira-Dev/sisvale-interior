@@ -131,6 +131,25 @@ public class TrechoTableModel extends AbstractTableModel {
         fireTableDataChanged();
     }
 
+        /**
+     * Atualiza o resultado de validação de uma linha específica.
+     *
+     * <p>Usado pelo controller após validar um trecho individualmente — sem
+     * substituir a tabela inteira. Dispara {@code fireTableRowsUpdated} para
+     * a linha afetada.</p>
+     *
+     * @param rowIndex  índice da linha
+     * @param resultado resultado da validação; {@code null} volta ao modo edição
+     */
+    public void atualizarResultado(int rowIndex, ResultadoTrechoDTO resultado) {
+        if (rowIndex < 0 || rowIndex >= linhas.size()) {
+            return;
+        }
+        LinhaTrecho atual = linhas.get(rowIndex);
+        linhas.set(rowIndex, new LinhaTrecho(atual.trecho(), resultado));
+        fireTableRowsUpdated(rowIndex, rowIndex);
+    }
+
     /**
      * Limpa a tabela.
      */
