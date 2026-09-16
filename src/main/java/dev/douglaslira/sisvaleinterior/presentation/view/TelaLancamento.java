@@ -63,6 +63,7 @@ public class TelaLancamento extends JPanel {
     private final JButton botaoAdicionarTrecho = ButtonFactory.criarAdicionarTrecho();
     private final JButton botaoRemoverTrecho = ButtonFactory.criarRemoverTrecho();
     private final JButton botaoSalvar = ButtonFactory.criarSalvar();
+    private final JButton botaoExcluir = ButtonFactory.criarExcluir();
     private final JButton botaoCancelar = ButtonFactory.criarCancelar();
 
     private final JLabel labelTotalDia = new JLabel("Total do dia: R$ 0,00");
@@ -148,6 +149,7 @@ public class TelaLancamento extends JPanel {
         // Linha 2 — ações principais
         JPanel linha2 = new JPanel(new FlowLayout(FlowLayout.CENTER, GAP, 0));
         linha2.add(botaoSalvar);
+        linha2.add(botaoExcluir);
         linha2.add(botaoCancelar);
 
         painel.add(linha1, BorderLayout.NORTH);
@@ -300,6 +302,10 @@ public class TelaLancamento extends JPanel {
     // Listeners
     public void adicionarListenerSalvar(ActionListener listener) {
         botaoSalvar.addActionListener(listener);
+    }
+
+    public void adicionarListenerExcluir(ActionListener listener) {
+        botaoExcluir.addActionListener(listener);
     }
 
     public void adicionarListenerCancelar(ActionListener listener) {
