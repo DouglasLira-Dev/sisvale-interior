@@ -4,22 +4,25 @@ import dev.douglaslira.sisvaleinterior.domain.model.Lancamento;
 import dev.douglaslira.sisvaleinterior.domain.model.ResultadoDia;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
- * DTO rico que combina o lançamento com o resultado da validação do dia.
+ * DTO rico que combina o lançamento com o resultado da validação de cada
+ * trecho do dia.
  *
- * <p>Usado pela tela de lançamentos para exibir status (✅/⚠️/❌) e total
- * do dia já calculado pelo domínio. Diferente do {@link LancamentoDTO} puro,
- * que só transporta os dados cadastrados.</p>
+ * <p>Usado pela tela de lançamentos para exibir status por trecho
+ * (✅/⚠️/❌), motivos e o total do dia já calculado pelo domínio.</p>
  *
- * @param lancamento dados do lançamento
- * @param status     status consolidado do dia (ida + volta)
- * @param total      valor a ressarcir no dia (0.00 se totalmente inválido)
+ * @param lancamento     dados básicos do lançamento
+ * @param resultados     veredito por trecho (mesma ordem dos trechos)
+ * @param valorTotalDia  valor a ressarcir no dia (0.00 se nenhum trecho válido)
+ * @param status         status consolidado do dia (VALIDO, PARCIAL, INVALIDO)
  */
 public record LancamentoComStatusDTO(
         LancamentoDTO lancamento,
-        StatusDia status,
-        BigDecimal total
+        List<ResultadoTrechoDTO> resultados,
+        BigDecimal valorTotalDia,
+        StatusDia status
 ) {
 
     /**
@@ -37,10 +40,16 @@ public record LancamentoComStatusDTO(
         if (resultado == null) {
             throw new IllegalArgumentException("Resultado é obrigatório");
         }
+
+        List<ResultadoTrechoDTO> resultadosDTO = resultado.resultados().stream()
+                .map(ResultadoTrechoDTO::de)
+                .toList();
+
         return new LancamentoComStatusDTO(
                 LancamentoDTO.de(lancamento),
-                calcularStatus(resultado),
-                resultado.valorTotalDia()
+                resultadosDTO,
+                resultado.valorTotalDia(),
+                calcularStatus(resultado)
         );
     }
 
