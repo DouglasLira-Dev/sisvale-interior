@@ -78,11 +78,6 @@ public final class CadastrarServidorUseCase {
                 .ifPresent(s -> {
                     throw new ApplicationException("Matrícula já cadastrada");
                 });
-
-        servidorRepository.buscarPorCpf(servidor.cpf())
-                .ifPresent(s -> {
-                    throw new ApplicationException("CPF já cadastrado");
-                });
     }
 
     private Servidor persistir(Servidor servidor) {

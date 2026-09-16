@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS servidor (
     id INTEGER PRIMARY KEY AUTOINCREMENT, -- identificador único do servidor
     nome TEXT NOT NULL, -- nome completo do servidor
     matricula TEXT NOT NULL UNIQUE, -- matrícula do servidor
-    cpf TEXT NOT NULL UNIQUE, -- CPF do servidor
+    cpf TEXT NOT NULL, -- CPF do servidor
     ativo INTEGER NOT NULL DEFAULT 1   -- 0 = INATIVO, 1 = ATIVO
             CHECK (ativo IN (0, 1)),
     criado_em TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now','localtime')) -- data e hora de criação (ISO)
