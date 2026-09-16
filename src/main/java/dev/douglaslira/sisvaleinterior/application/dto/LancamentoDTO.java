@@ -43,11 +43,11 @@ public record LancamentoDTO(
                 lancamento.id(),
                 lancamento.servidorId(),
                 lancamento.data(),
-                lancamento.horaDescida().valor(),
-                lancamento.horaEntrada().valor(),
+                lancamento.horaDescida() == null ? null : lancamento.horaDescida().valor(),
+                lancamento.horaEntrada() == null ? null : lancamento.horaEntrada().valor(),
                 lancamento.valorIda(),
-                lancamento.horaSaida().valor(),
-                lancamento.horaOnibus().valor(),
+                lancamento.horaSaida() == null ? null : lancamento.horaSaida().valor(),
+                lancamento.horaOnibus() == null ? null : lancamento.horaOnibus().valor(),
                 lancamento.valorVolta()
         );
     }

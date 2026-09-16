@@ -30,30 +30,23 @@ public final class CalculadoraRessarcimento {
             throw new IllegalArgumentException("Lançamento é obrigatório");
         }
 
-        ResultadoValidacao validacaoIda = validador.validarIda(
-                lancamento.horaDescida(),
-                lancamento.horaEntrada()
-        );
+        ResultadoValidacao validacaoIda = lancamento.temIda()
+                ? validador.validarIda(lancamento.horaDescida(), lancamento.horaEntrada())
+                : ResultadoValidacao.naoInformado();
 
-        ResultadoValidacao validacaoVolta = validador.validarVolta(
-                lancamento.horaSaida(),
-                lancamento.horaOnibus()
-        );
+        ResultadoValidacao validacaoVolta = lancamento.temVolta()
+                ? validador.validarVolta(lancamento.horaSaida(), lancamento.horaOnibus())
+                : ResultadoValidacao.naoInformado();
 
         BigDecimal total = BigDecimal.ZERO;
-        if (validacaoIda.valido()) {
+        if (lancamento.temIda() && validacaoIda.valido()) {
             total = total.add(lancamento.valorIda());
         }
-        if (validacaoVolta.valido()) {
+        if (lancamento.temVolta() && validacaoVolta.valido()) {
             total = total.add(lancamento.valorVolta());
         }
 
-        return new ResultadoDia(
-                lancamento.data(),
-                validacaoIda,
-                validacaoVolta,
-                total
-        );
+        return new ResultadoDia(lancamento.data(), validacaoIda, validacaoVolta, total);
     }
 
     public ResultadoMes calcularMes(List<Lancamento> lancamentos, YearMonth mesAno, Long servidorId){

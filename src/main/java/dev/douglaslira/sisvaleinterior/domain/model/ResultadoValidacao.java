@@ -18,4 +18,8 @@ public record ResultadoValidacao(boolean valido, String motivo, long diferencaMi
     public static ResultadoValidacao invalido(long diferencaMinutos, String motivo) {
         return new ResultadoValidacao(false, motivo, diferencaMinutos);
     }
+
+    public static ResultadoValidacao naoInformado() {
+        return new ResultadoValidacao(true, "Não lançado", 0);
+    }
 }

@@ -22,14 +22,14 @@ public final class Lancamento {
 
     
     public Lancamento(Long id,
-                      Long servidorId,
-                      LocalDate data,
-                      Horario horaDescida,
-                      Horario horaEntrada,
-                      BigDecimal valorIda,
-                      Horario horaSaida,
-                      Horario horaOnibus,
-                      BigDecimal valorVolta) {
+                    Long servidorId,
+                    LocalDate data,
+                    Horario horaDescida,
+                    Horario horaEntrada,
+                    BigDecimal valorIda,
+                    Horario horaSaida,
+                    Horario horaOnibus,
+                    BigDecimal valorVolta) {
 
         if (servidorId == null) {
             throw new IllegalArgumentException("Servidor é obrigatório");
@@ -37,30 +37,34 @@ public final class Lancamento {
         if (data == null) {
             throw new IllegalArgumentException("Data é obrigatória");
         }
-        if (horaDescida == null) {
-            throw new IllegalArgumentException("Hora de descida é obrigatória");
+
+        boolean idaCompleta = horaDescida != null && horaEntrada != null && valorIda != null;
+        boolean idaParcial = !idaCompleta && (horaDescida != null || horaEntrada != null || valorIda != null);
+        if (idaParcial){
+            throw new IllegalArgumentException("Para lançar a ida, informe a hora de descida, hora de entrada e valor.");
         }
-        if (horaEntrada == null) {
-            throw new IllegalArgumentException("Hora de entrada é obrigatória");
+
+        boolean voltaCompleta = horaSaida != null && horaOnibus != null && valorVolta != null;
+        boolean voltaParcial = !voltaCompleta && (horaSaida != null || horaOnibus != null || valorVolta != null);
+        if (voltaParcial){
+            throw new IllegalArgumentException("Para lançar a volta, informe hora de saída, hora do ôninbus e valor");
         }
-        if (horaSaida == null) {
-            throw new IllegalArgumentException("Hora de saída é obrigatória");
+        if (!idaCompleta && !voltaCompleta) {
+            throw new IllegalArgumentException("Informe ao menos a ida ou a volta completas.");
         }
-        if (horaOnibus == null) {
-            throw new IllegalArgumentException("Hora do ônibus é obrigatória");
-        }
-        validarValor(valorIda);
-        validarValor(valorVolta);
+
+        if (idaCompleta) validarValor(valorIda);
+        if (voltaCompleta) validarValor(valorVolta);
 
         this.id = id;
         this.servidorId = servidorId;
         this.data = data;
-        this.horaDescida = horaDescida;
-        this.horaEntrada = horaEntrada;
-        this.valorIda = valorIda.setScale(2, RoundingMode.HALF_UP);
-        this.horaSaida = horaSaida;
-        this.horaOnibus = horaOnibus;
-        this.valorVolta = valorVolta.setScale(2, RoundingMode.HALF_UP);
+        this.horaDescida = idaCompleta ? horaDescida : null;
+        this.horaEntrada = idaCompleta ? horaEntrada : null;
+        this.valorIda = idaCompleta ? valorIda.setScale(2, RoundingMode.HALF_UP) : null;
+        this.horaSaida = voltaCompleta ? horaSaida : null;
+        this.horaOnibus = voltaCompleta ? horaOnibus : null;
+        this.valorVolta = voltaCompleta ? valorVolta.setScale(2, RoundingMode.HALF_UP) : null;
     }
 
     private static void validarValor(BigDecimal valor) {
@@ -106,6 +110,14 @@ public final class Lancamento {
 
     public BigDecimal valorVolta() {
         return valorVolta;
+    }
+
+    public boolean temIda(){
+        return horaDescida != null;
+    }
+
+    public boolean temVolta(){
+        return horaSaida != null;
     }
 
     @Override

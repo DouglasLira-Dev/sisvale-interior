@@ -288,11 +288,11 @@ public final class LancamentoRepositoryJdbc implements LancamentoRepository {
     private void preencherParametros(PreparedStatement ps, Lancamento l) throws SQLException {
         ps.setLong(1, l.servidorId());
         ps.setString(2, l.data().toString());
-        ps.setString(3, l.horaDescida().formatado());
-        ps.setString(4, l.horaEntrada().formatado());
+        ps.setString(3, l.horaDescida() == null ? null : l.horaDescida().formatado());
+        ps.setString(4, l.horaEntrada() == null ? null : l.horaEntrada().formatado());
         ps.setBigDecimal(5, l.valorIda());
-        ps.setString(6, l.horaSaida().formatado());
-        ps.setString(7, l.horaOnibus().formatado());
+        ps.setString(6, l.horaSaida() == null ? null : l.horaSaida().formatado());
+        ps.setString(7, l.horaOnibus() == null ? null : l.horaOnibus().formatado());
         ps.setBigDecimal(8, l.valorVolta());
     }
 
@@ -315,11 +315,11 @@ public final class LancamentoRepositoryJdbc implements LancamentoRepository {
         long id = rs.getLong("id");
         long servidorId = rs.getLong("servidor_id");
         LocalDate data = LocalDate.parse(rs.getString("data"));
-        Horario horaDescida = Horario.parse(rs.getString("hora_descida"));
-        Horario horaEntrada = Horario.parse(rs.getString("hora_entrada"));
+        Horario horaDescida = parseOuNull(rs.getString("hora_descida"));
+        Horario horaEntrada = parseOuNull(rs.getString("hora_entrada"));
         BigDecimal valorIda = rs.getBigDecimal("valor_ida");
-        Horario horaSaida = Horario.parse(rs.getString("hora_saida"));
-        Horario horaOnibus = Horario.parse(rs.getString("hora_onibus"));
+        Horario horaSaida = parseOuNull(rs.getString("hora_saida"));
+        Horario horaOnibus = parseOuNull(rs.getString("hora_onibus"));
         BigDecimal valorVolta = rs.getBigDecimal("valor_volta");
 
         return new Lancamento(
@@ -328,6 +328,10 @@ public final class LancamentoRepositoryJdbc implements LancamentoRepository {
                 horaSaida, horaOnibus, valorVolta
         );
     }
+
+    private static Horario parseOuNull (String hhmm) {
+            return hhmm == null ? null : Horario.parse(hhmm);
+        }
 
     /**
      * Cria uma cópia do lançamento com o id informado.

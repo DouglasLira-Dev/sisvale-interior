@@ -17,12 +17,12 @@ CREATE TABLE IF NOT EXISTS lancamento (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     servidor_id INTEGER NOT NULL, -- identificador único do servidor
     data TEXT NOT NULL, -- YYYY-MM-DD (ISO — data do lançamento)
-    hora_descida TEXT NOT NULL, -- HH:mm (ida)
-    hora_entrada TEXT NOT NULL, -- HH:mm (chegada no destino/ida)
-    valor_ida NUMERIC(10,2) NOT NULL, -- valor do vale-transporte de ida
-    hora_saida TEXT NOT NULL, -- HH:mm (volta)
-    hora_onibus TEXT NOT NULL, -- HH:mm (horário do onibus de volta)
-    valor_volta NUMERIC(10,2) NOT NULL, -- valor do vale-transporte de volta
+    hora_descida TEXT , -- HH:mm (ida)
+    hora_entrada TEXT , -- HH:mm (chegada no destino/ida)
+    valor_ida NUMERIC(10,2), -- valor do vale-transporte de ida
+    hora_saida TEXT, -- HH:mm (volta)
+    hora_onibus TEXT, -- HH:mm (horário do onibus de volta)
+    valor_volta NUMERIC(10,2), -- valor do vale-transporte de volta
     criado_em TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now','localtime')), -- data e hora de criação (ISO)
 
     CONSTRAINT fk_lancamento_servidor

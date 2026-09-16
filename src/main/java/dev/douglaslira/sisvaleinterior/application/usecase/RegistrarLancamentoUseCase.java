@@ -125,14 +125,18 @@ public final class RegistrarLancamentoUseCase {
         try {
             return new Lancamento(
                     null, servidorId, data,
-                    new Horario(horaDescida), new Horario(horaEntrada), valorIda,
-                    new Horario(horaSaida), new Horario(horaOnibus), valorVolta
+                    paraHorario(horaDescida), paraHorario(horaEntrada), valorIda,
+                    paraHorario(horaSaida), paraHorario(horaOnibus), valorVolta
             );
         } catch (HorarioInvalidoException e) {
             throw new ApplicationException("Horário inválido: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
             throw new ApplicationException("Dados do lançamento inválidos: " + e.getMessage(), e);
         }
+    }
+
+    private static Horario paraHorario(LocalTime hora) {
+        return hora == null ? null : new Horario(hora);
     }
 
     private Lancamento persistir(Lancamento lancamento) {

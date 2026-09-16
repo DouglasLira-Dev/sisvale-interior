@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -44,11 +45,7 @@ public final class DatabaseInitializer {
         this.connectionFactory = connectionFactory;
     }
 
-    /**
-     * Executa o schema do banco. Idempotente — pode ser chamado sempre.
-     *
-     * @throws PersistenceException se o schema não for encontrado ou falhar a execução
-     */
+        // DatabaseInitializer.java — chamar dentro de inicializar(), depois de rodar o schema.sql
     public void inicializar() {
         log.info("Inicializando banco de dados...");
 
@@ -56,17 +53,84 @@ public final class DatabaseInitializer {
         List<String> statements = dividirStatements(sql);
 
         try (Connection conn = connectionFactory.getConnection();
-             Statement st = conn.createStatement()) {
+            Statement st = conn.createStatement()) {
 
             for (String comando : statements) {
                 st.execute(comando);
             }
+            aplicarMigracoes(conn);   // nova linha
 
             log.info("Banco inicializado com sucesso ({} statements executados)", statements.size());
 
         } catch (SQLException e) {
             throw new PersistenceException("Falha ao inicializar banco de dados", e);
         }
+    }
+
+    private void aplicarMigracoes(Connection conn) throws SQLException {
+        int versao;
+        try (Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery("PRAGMA user_version")) {
+            rs.next();
+            versao = rs.getInt(1);
+        }
+        if (versao >= 1) {
+            return;
+        }
+
+        log.info("Aplicando migração 1: CPF não-único e lançamento com pernas opcionais...");
+        try (Statement st = conn.createStatement()) {
+            st.execute("PRAGMA foreign_keys = OFF");
+
+            st.execute("ALTER TABLE servidor RENAME TO servidor_old");
+            st.execute("""
+                    CREATE TABLE servidor (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nome TEXT NOT NULL,
+                        matricula TEXT NOT NULL UNIQUE,
+                        cpf TEXT NOT NULL,
+                        ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
+                        criado_em TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now','localtime'))
+                    )
+                    """);
+            st.execute("""
+                    INSERT INTO servidor (id, nome, matricula, cpf, ativo, criado_em)
+                    SELECT id, nome, matricula, cpf, ativo, criado_em FROM servidor_old
+                    """);
+            st.execute("DROP TABLE servidor_old");
+
+            st.execute("ALTER TABLE lancamento RENAME TO lancamento_old");
+            st.execute("""
+                    CREATE TABLE lancamento (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        servidor_id INTEGER NOT NULL,
+                        data TEXT NOT NULL,
+                        hora_descida TEXT,
+                        hora_entrada TEXT,
+                        valor_ida NUMERIC(10,2),
+                        hora_saida TEXT,
+                        hora_onibus TEXT,
+                        valor_volta NUMERIC(10,2),
+                        criado_em TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now','localtime')),
+                        CONSTRAINT fk_lancamento_servidor FOREIGN KEY (servidor_id)
+                            REFERENCES servidor (id) ON DELETE CASCADE ON UPDATE CASCADE,
+                        CONSTRAINT uq_lancamento_servidor_data UNIQUE (servidor_id, data),
+                        CONSTRAINT ck_lancamento_data_format
+                            CHECK (data GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]')
+                    )
+                    """);
+            st.execute("""
+                    INSERT INTO lancamento
+                    SELECT id, servidor_id, data, hora_descida, hora_entrada, valor_ida,
+                        hora_saida, hora_onibus, valor_volta, criado_em
+                    FROM lancamento_old
+                    """);
+            st.execute("DROP TABLE lancamento_old");
+
+            st.execute("PRAGMA foreign_keys = ON");
+            st.execute("PRAGMA user_version = 1");
+        }
+        log.info("Migração 1 aplicada.");
     }
 
     /**
