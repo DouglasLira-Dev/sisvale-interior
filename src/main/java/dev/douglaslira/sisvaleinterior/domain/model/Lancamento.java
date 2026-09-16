@@ -1,79 +1,57 @@
 package dev.douglaslira.sisvaleinterior.domain.model;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 
-
+/**
+ * Entidade que representa um lançamento diário de deslocamento de um servidor.
+ *
+ * <p>Um lançamento contém <strong>N trechos</strong> — cada trecho é um par
+ * de horários (referência → comparada) mais o valor pago. Os trechos podem
+ * representar ida, volta, baldeações, etc., dependendo do uso.</p>
+ *
+ * <p>É um <strong>portador de dados</strong>: não aplica a regra de
+ * tolerância (isso é papel do {@code ValidadorHorario}). Aqui só se validam
+ * invariantes estruturais.</p>
+ *
+ * <p>Imutável. {@code equals}/{@code hashCode} por {@code (servidorId, data)}.</p>
+ */
 public final class Lancamento {
 
     private final Long id;
     private final Long servidorId;
     private final LocalDate data;
+    private final List<Trecho> trechos;
 
-    private final Horario horaDescida;
-    private final Horario horaEntrada;
-    private final BigDecimal valorIda;
-
-    private final Horario horaSaida;
-    private final Horario horaOnibus;
-    private final BigDecimal valorVolta;
-
-    
-    public Lancamento(Long id,
-                    Long servidorId,
-                    LocalDate data,
-                    Horario horaDescida,
-                    Horario horaEntrada,
-                    BigDecimal valorIda,
-                    Horario horaSaida,
-                    Horario horaOnibus,
-                    BigDecimal valorVolta) {
-
+    /**
+     * Cria um lançamento com os trechos informados.
+     *
+     * @param id         identificador (pode ser {@code null} antes de persistir)
+     * @param servidorId id do servidor (obrigatório)
+     * @param data       data do lançamento (obrigatória)
+     * @param trechos    trechos do dia (pelo menos 1, não nulo)
+     * @throws IllegalArgumentException se algum campo obrigatório for nulo
+     *                                  ou a lista de trechos estiver vazia
+     */
+    public Lancamento(Long id, Long servidorId, LocalDate data, List<Trecho> trechos) {
         if (servidorId == null) {
             throw new IllegalArgumentException("Servidor é obrigatório");
         }
         if (data == null) {
             throw new IllegalArgumentException("Data é obrigatória");
         }
-
-        boolean idaCompleta = horaDescida != null && horaEntrada != null && valorIda != null;
-        boolean idaParcial = !idaCompleta && (horaDescida != null || horaEntrada != null || valorIda != null);
-        if (idaParcial){
-            throw new IllegalArgumentException("Para lançar a ida, informe a hora de descida, hora de entrada e valor.");
+        if (trechos == null) {
+            throw new IllegalArgumentException("Trechos são obrigatórios");
         }
-
-        boolean voltaCompleta = horaSaida != null && horaOnibus != null && valorVolta != null;
-        boolean voltaParcial = !voltaCompleta && (horaSaida != null || horaOnibus != null || valorVolta != null);
-        if (voltaParcial){
-            throw new IllegalArgumentException("Para lançar a volta, informe hora de saída, hora do ôninbus e valor");
+        if (trechos.isEmpty()) {
+            throw new IllegalArgumentException("Lançamento precisa de pelo menos um trecho");
         }
-        if (!idaCompleta && !voltaCompleta) {
-            throw new IllegalArgumentException("Informe ao menos a ida ou a volta completas.");
-        }
-
-        if (idaCompleta) validarValor(valorIda);
-        if (voltaCompleta) validarValor(valorVolta);
 
         this.id = id;
         this.servidorId = servidorId;
         this.data = data;
-        this.horaDescida = idaCompleta ? horaDescida : null;
-        this.horaEntrada = idaCompleta ? horaEntrada : null;
-        this.valorIda = idaCompleta ? valorIda.setScale(2, RoundingMode.HALF_UP) : null;
-        this.horaSaida = voltaCompleta ? horaSaida : null;
-        this.horaOnibus = voltaCompleta ? horaOnibus : null;
-        this.valorVolta = voltaCompleta ? valorVolta.setScale(2, RoundingMode.HALF_UP) : null;
-    }
-
-    private static void validarValor(BigDecimal valor) {
-        if (valor == null) {
-            throw new IllegalArgumentException("Valor é obrigatório");
-        }
-        if (valor.signum() < 0) {
-            throw new IllegalArgumentException("Valor não pode ser negativo");
-        }
+        this.trechos = List.copyOf(trechos);
     }
 
     public Long id() {
@@ -88,38 +66,22 @@ public final class Lancamento {
         return data;
     }
 
-    public Horario horaDescida() {
-        return horaDescida;
+    public List<Trecho> trechos() {
+        return trechos;
     }
 
-    public Horario horaEntrada() {
-        return horaEntrada;
+    /**
+     * @return a quantidade de trechos deste lançamento
+     */
+    public int getQuantidadeTrechos() {
+        return trechos.size();
     }
 
-    public BigDecimal valorIda() {
-        return valorIda;
-    }
-
-    public Horario horaSaida() {
-        return horaSaida;
-    }
-
-    public Horario horaOnibus() {
-        return horaOnibus;
-    }
-
-    public BigDecimal valorVolta() {
-        return valorVolta;
-    }
-
-    public boolean temIda(){
-        return horaDescida != null;
-    }
-
-    public boolean temVolta(){
-        return horaSaida != null;
-    }
-
+    /**
+     * Igualdade baseada em {@code (servidorId, data)} — combinação única
+     * garantida por constraint no banco. O {@code id} não participa porque
+     * pode ser {@code null} antes da persistência.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -132,14 +94,16 @@ public final class Lancamento {
         return Objects.hash(servidorId, data);
     }
 
+    /**
+     * Representação resumida — não despeja a lista completa de trechos.
+     */
     @Override
     public String toString() {
         return "Lancamento{" +
                 "id=" + id +
                 ", servidorId=" + servidorId +
                 ", data=" + data +
-                ", valorIda=" + valorIda +
-                ", valorVolta=" + valorVolta +
+                ", trechos=" + trechos.size() +
                 '}';
     }
 }
