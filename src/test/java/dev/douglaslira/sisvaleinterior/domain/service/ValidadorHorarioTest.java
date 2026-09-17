@@ -36,7 +36,7 @@ class ValidadorHorarioTest {
         })
         @DisplayName("deve validar corretamente o par de ida")
         void deveValidarParDeIda(String descida, String entrada, boolean esperado, String descricao) {
-            ResultadoValidacao resultado = validador.validarIda(
+            ResultadoValidacao resultado = validador.validar(
                     Horario.parse(descida),
                     Horario.parse(entrada)
             );
@@ -62,7 +62,7 @@ class ValidadorHorarioTest {
         })
         @DisplayName("deve validar corretamente o par de volta")
         void deveValidarParDeVolta(String saida, String onibus, boolean esperado) {
-            ResultadoValidacao resultado = validador.validarVolta(
+            ResultadoValidacao resultado = validador.validar(
                     Horario.parse(saida),
                     Horario.parse(onibus)
             );
@@ -80,7 +80,7 @@ class ValidadorHorarioTest {
         @Test
         @DisplayName("deve aceitar exatamente no limite da tolerância de 30 min")
         void deveAceitarNoLimiteDe30Minutos() {
-            ResultadoValidacao resultado = validador30.validarIda(
+            ResultadoValidacao resultado = validador30.validar(
                     Horario.parse("07:45"),
                     Horario.parse("07:15")
             );
@@ -92,7 +92,7 @@ class ValidadorHorarioTest {
         @Test
         @DisplayName("deve rejeitar 1 minuto além da tolerância de 30 min")
         void deveRejeitarUmMinutoAlemDe30Minutos() {
-            ResultadoValidacao resultado = validador30.validarIda(
+            ResultadoValidacao resultado = validador30.validar(
                     Horario.parse("07:45"),
                     Horario.parse("07:14")
             );
@@ -109,7 +109,7 @@ class ValidadorHorarioTest {
         @Test
         @DisplayName("deve retornar 15 para diferença dentro do limite")
         void deveRetornar15ParaDiferencaNoLimite() {
-            ResultadoValidacao resultado = validador.validarIda(
+            ResultadoValidacao resultado = validador.validar(
                     Horario.parse("07:45"),
                     Horario.parse("07:30")
             );
@@ -120,7 +120,7 @@ class ValidadorHorarioTest {
         @Test
         @DisplayName("deve retornar 16 para diferença fora do limite")
         void deveRetornar16ParaDiferencaForaDoLimite() {
-            ResultadoValidacao resultado = validador.validarIda(
+            ResultadoValidacao resultado = validador.validar(
                     Horario.parse("07:45"),
                     Horario.parse("07:29")
             );
@@ -131,7 +131,7 @@ class ValidadorHorarioTest {
         @Test
         @DisplayName("deve retornar 0 quando horários são iguais")
         void deveRetornarZeroQuandoIguais() {
-            ResultadoValidacao resultado = validador.validarIda(
+            ResultadoValidacao resultado = validador.validar(
                     Horario.parse("07:45"),
                     Horario.parse("07:45")
             );
@@ -147,7 +147,7 @@ class ValidadorHorarioTest {
         @Test
         @DisplayName("deve conter 'tolerância' no motivo quando inválido")
         void deveConterToleranciaNoMotivo() {
-            ResultadoValidacao resultado = validador.validarIda(
+            ResultadoValidacao resultado = validador.validar(
                     Horario.parse("07:45"),
                     Horario.parse("07:29")
             );
@@ -159,7 +159,7 @@ class ValidadorHorarioTest {
         @Test
         @DisplayName("deve conter a diferença absoluta no motivo")
         void deveConterDiferencaNoMotivo() {
-            ResultadoValidacao resultado = validador.validarIda(
+            ResultadoValidacao resultado = validador.validar(
                     Horario.parse("07:45"),
                     Horario.parse("07:00")
             );
@@ -202,11 +202,11 @@ class ValidadorHorarioTest {
             ValidadorHorario padrao = new ValidadorHorario();
 
             // 07:45 vs 07:30 → limite exato (15 min) → válido
-            assertThat(padrao.validarIda(Horario.parse("07:45"), Horario.parse("07:30")).valido())
+            assertThat(padrao.validar(Horario.parse("07:45"), Horario.parse("07:30")).valido())
                     .isTrue();
 
             // 07:45 vs 07:29 → 16 min antes → inválido
-            assertThat(padrao.validarIda(Horario.parse("07:45"), Horario.parse("07:29")).valido())
+            assertThat(padrao.validar(Horario.parse("07:45"), Horario.parse("07:29")).valido())
                     .isFalse();
         }
     }
