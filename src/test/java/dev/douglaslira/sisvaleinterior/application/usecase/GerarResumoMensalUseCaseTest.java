@@ -10,6 +10,8 @@ import dev.douglaslira.sisvaleinterior.infrastructure.persistence.ConnectionFact
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.DatabaseInitializer;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.LancamentoRepositoryJdbc;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.ServidorRepositoryJdbc;
+import dev.douglaslira.sisvaleinterior.domain.model.Trecho;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -73,11 +75,23 @@ class GerarResumoMensalUseCaseTest {
         return servidorRepository.salvar(new Servidor(null, nome, matricula, cpf, false));
     }
 
-    private void criarLancamentoValido(Long servidorId, int dia) {
+        private void criarLancamentoValido(Long servidorId, int dia) {
+        Trecho ida = new Trecho(
+                Horario.parse("07:45"),
+                Horario.parse("07:30"),
+                new BigDecimal("20.00")
+        );
+        Trecho volta = new Trecho(
+                Horario.parse("17:00"),
+                Horario.parse("16:45"),
+                new BigDecimal("22.00")
+        );
+
         lancamentoRepository.salvar(new Lancamento(
-                null, servidorId, LocalDate.of(MES.getYear(), MES.getMonth(), dia),
-                Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                null,
+                servidorId,
+                LocalDate.of(MES.getYear(), MES.getMonth(), dia),
+                List.of(ida, volta)
         ));
     }
 
