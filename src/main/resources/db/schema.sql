@@ -54,6 +54,12 @@ CREATE TABLE IF NOT EXISTS trecho (
         UNIQUE (lancamento_id, ordem)
 );
 
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    versao      INTEGER PRIMARY KEY,
+    descricao   TEXT NOT NULL,
+    aplicada_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- índices
 CREATE INDEX IF NOT EXISTS idx_lancamento_servidor_data
     ON lancamento (servidor_id, data);
