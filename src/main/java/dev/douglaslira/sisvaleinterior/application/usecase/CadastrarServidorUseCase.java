@@ -75,8 +75,13 @@ public final class CadastrarServidorUseCase {
 
     private void verificarDuplicidade(Servidor servidor) {
         servidorRepository.buscarPorMatricula(servidor.matricula())
+            .ifPresent(s -> {
+                throw new ApplicationException("Matrícula já cadastrada");
+            });
+        
+            servidorRepository.buscarPorCpf(servidor.cpf())
                 .ifPresent(s -> {
-                    throw new ApplicationException("Matrícula já cadastrada");
+                    throw new ApplicationException("CPF já cadastrado");
                 });
     }
 
