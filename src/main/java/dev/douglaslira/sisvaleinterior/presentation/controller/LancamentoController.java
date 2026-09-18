@@ -15,9 +15,9 @@ import dev.douglaslira.sisvaleinterior.domain.model.ResultadoValidacao;
 import dev.douglaslira.sisvaleinterior.domain.model.Trecho;
 import dev.douglaslira.sisvaleinterior.domain.service.ValidadorHorario;
 import dev.douglaslira.sisvaleinterior.presentation.view.TelaLancamento;
+import dev.douglaslira.sisvaleinterior.presentation.view.DialogDetalheTrechos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import javax.swing.event.TableModelEvent;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -112,7 +112,7 @@ public final class LancamentoController {
         view.adicionarListenerMesMudou(e -> onMesMudou());
         view.adicionarListenerAdicionarTrecho(e -> onAdicionarTrecho());
         view.adicionarListenerRemoverTrecho(e -> onRemoverTrecho());
-
+        view.adicionarListenerDuploCliqueLancamento(this::onDetalheLancamento);
         // Listener do modelo de trechos — validação em tempo real
         view.getModeloTrechos().addTableModelListener(this::onTrechoAlterado);
 
@@ -280,6 +280,36 @@ public final class LancamentoController {
             log.error("Erro inesperado ao excluir lançamento", e);
             view.mostrarErro("Erro inesperado ao excluir lançamento. Consulte o log.");
         }
+    }
+
+    /**
+     * Abre o diálogo de detalhes com os trechos do lançamento selecionado.
+     *
+     * <p>Disparado por duplo-clique na linha da tabela principal. Se nada
+     * estiver selecionado, não faz nada.</p>
+     */
+    private void onDetalheLancamento() {
+        LancamentoComStatusDTO dto = view.getLancamentoComStatusSelecionado();
+        if (dto == null) {
+            return;
+        }
+
+        String data = dto.lancamento().data() == null
+                ? "?"
+                : dto.lancamento().data().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+        String total = dto.valorTotalDia() == null
+                ? "0,00"
+                : dto.valorTotalDia().toPlainString().replace('.', ',');
+
+        String contexto = "Data: " + data + " — Total: R$ " + total;
+
+        DialogDetalheTrechos dialogo = new DialogDetalheTrechos(
+                javax.swing.SwingUtilities.getWindowAncestor(view),
+                contexto,
+                dto.resultados()
+        );
+        dialogo.setVisible(true);
     }
 
     // Carregamentos

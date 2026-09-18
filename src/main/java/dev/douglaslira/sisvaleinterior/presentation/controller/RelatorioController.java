@@ -6,12 +6,15 @@ import dev.douglaslira.sisvaleinterior.application.exception.ApplicationExceptio
 import dev.douglaslira.sisvaleinterior.application.usecase.ListarServidoresUseCase;
 import dev.douglaslira.sisvaleinterior.application.usecase.ValidarMesUseCase;
 import dev.douglaslira.sisvaleinterior.presentation.view.TelaRelatorio;
+import dev.douglaslira.sisvaleinterior.presentation.view.DialogDetalheTrechos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.format.DateTimeFormatter;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.SwingUtilities;
 
 /**
  * Controller da tela de relatório mensal.
@@ -61,7 +64,7 @@ public final class RelatorioController {
         view.adicionarListenerGerar(e -> onGerar());
         view.adicionarListenerServidorMudou(e -> view.popularResumo(null));
         view.adicionarListenerMesMudou(e -> view.popularResumo(null));
-
+        view.adicionarListenerDuploCliqueDia(this::onDetalheDia);
         // Init
         carregarMeses();
         recarregarServidores();
@@ -90,6 +93,36 @@ public final class RelatorioController {
             log.error("Erro inesperado ao gerar relatório", e);
             view.mostrarErro("Erro inesperado ao gerar relatório. Consulte o log.");
         }
+    }
+
+    /**
+     * Abre o diálogo de detalhes com os trechos do dia selecionado.
+     *
+     * <p>Disparado por duplo-clique na linha da tabela de dias. Se nada
+     * estiver selecionado, não faz nada.</p>
+     */
+    private void onDetalheDia() {
+        ResumoMensalDTO.DiaResumoDTO dia = view.getDiaSelecionado();
+        if (dia == null) {
+            return;
+        }
+
+        String data = dia.data() == null
+                ? "?"
+                : dia.data().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+        String total = dia.valorTotalDia() == null
+                ? "0,00"
+                : dia.valorTotalDia().toPlainString().replace('.', ',');
+
+        String contexto = "Data: " + data + " — Total: R$ " + total;
+
+        DialogDetalheTrechos dialogo = new DialogDetalheTrechos(
+                SwingUtilities.getWindowAncestor(view),
+                contexto,
+                dia.resultados()
+        );
+        dialogo.setVisible(true);
     }
 
     // Carregamentos
