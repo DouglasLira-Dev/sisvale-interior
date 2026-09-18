@@ -4,6 +4,8 @@ import dev.douglaslira.sisvaleinterior.domain.model.Horario;
 import dev.douglaslira.sisvaleinterior.domain.model.Lancamento;
 import dev.douglaslira.sisvaleinterior.domain.model.Servidor;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.exception.PersistenceException;
+import dev.douglaslira.sisvaleinterior.domain.model.Trecho;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -63,11 +65,22 @@ class LancamentoRepositoryJdbcTest {
 
     // Helpers
     private Lancamento lancamento(int dia, String descida, String entrada, String valorIda,
-                        String saida, String onibus, String valorVolta) {
+                                String saida, String onibus, String valorVolta) {
+        Trecho ida = new Trecho(
+                Horario.parse(descida),
+                Horario.parse(entrada),
+                new BigDecimal(valorIda)
+        );
+        Trecho volta = new Trecho(
+                Horario.parse(saida),
+                Horario.parse(onibus),
+                new BigDecimal(valorVolta)
+        );
         return new Lancamento(
-                null, servidorId, LocalDate.of(MES.getYear(), MES.getMonth(), dia),
-                Horario.parse(descida), Horario.parse(entrada), new BigDecimal(valorIda),
-                Horario.parse(saida), Horario.parse(onibus), new BigDecimal(valorVolta)
+                null,
+                servidorId,
+                LocalDate.of(MES.getYear(), MES.getMonth(), dia),
+                List.of(ida, volta)
         );
     }
 
@@ -102,10 +115,19 @@ class LancamentoRepositoryJdbcTest {
         @Test
         @DisplayName("servidor_id inexistente lança PersistenceException (FK)")
         void servidorInexistenteLancaExcecao() {
+            Trecho ida = new Trecho(
+                    Horario.parse("07:45"),
+                    Horario.parse("07:30"),
+                    new BigDecimal("20.00")
+            );
+            Trecho volta = new Trecho(
+                    Horario.parse("17:00"),
+                    Horario.parse("16:45"),
+                    new BigDecimal("22.00")
+            );
             Lancamento orfao = new Lancamento(
                     null, 999L, LocalDate.of(2026, 9, 15),
-                    Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                    Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                    List.of(ida, volta)
             );
 
             assertThatThrownBy(() -> repository.salvar(orfao))
@@ -144,10 +166,19 @@ class LancamentoRepositoryJdbcTest {
         void filtraOutroMes() {
             repository.salvar(lancamentoPadrao(15));
 
+            Trecho idaOut = new Trecho(
+                    Horario.parse("07:45"),
+                    Horario.parse("07:30"),
+                    new BigDecimal("20.00")
+            );
+            Trecho voltaOut = new Trecho(
+                    Horario.parse("17:00"),
+                    Horario.parse("16:45"),
+                    new BigDecimal("22.00")
+            );
             Lancamento outubro = new Lancamento(
                     null, servidorId, LocalDate.of(2026, 10, 15),
-                    Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                    Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                    List.of(idaOut, voltaOut)
             );
             repository.salvar(outubro);
 
@@ -237,10 +268,19 @@ class LancamentoRepositoryJdbcTest {
             // Lançamento de outro servidor, não deve aparecer
             Servidor outro = servidorRepository.salvar(
                     Servidor.novo("Maria", "M002", "52998224725"));
+            Trecho idaOutro = new Trecho(
+                    Horario.parse("07:45"),
+                    Horario.parse("07:30"),
+                    new BigDecimal("20.00")
+            );
+            Trecho voltaOutro = new Trecho(
+                    Horario.parse("17:00"),
+                    Horario.parse("16:45"),
+                    new BigDecimal("22.00")
+            );
             new LancamentoRepositoryJdbc(connectionFactory).salvar(new Lancamento(
                     null, outro.id(), LocalDate.of(2026, 9, 10),
-                    Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                    Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                    List.of(idaOutro, voltaOutro)
             ));
 
             List<Lancamento> lista = repository.listarPorServidor(servidorId);
@@ -297,47 +337,54 @@ class LancamentoRepositoryJdbcTest {
     @DisplayName("Conversão de tipos")
     class ConversaoDeTipos {
 
-        @Test
-        @DisplayName("LocalDate e Horario são preservados após ida e volta")
-        void dataEHorariosPreservados() {
-            Lancamento original = lancamento(
-                    15, "07:45", "07:30", "20.00", "17:00", "16:45", "22.00");
+    @Test
+    @DisplayName("LocalDate e Horario são preservados após ida e volta")
+    void dataEHorariosPreservados() {
+        Lancamento original = lancamento(
+                15, "07:45", "07:30", "20.00", "17:00", "16:45", "22.00");
 
-            Lancamento salvo = repository.salvar(original);
-            Lancamento recuperado = repository.buscarPorId(salvo.id()).orElseThrow();
+        Lancamento salvo = repository.salvar(original);
+        Lancamento recuperado = repository.buscarPorId(salvo.id()).orElseThrow();
 
-            assertThat(recuperado.data()).isEqualTo(LocalDate.of(2026, 9, 15));
-            assertThat(recuperado.horaDescida()).isEqualTo(Horario.parse("07:45"));
-            assertThat(recuperado.horaEntrada()).isEqualTo(Horario.parse("07:30"));
-            assertThat(recuperado.horaSaida()).isEqualTo(Horario.parse("17:00"));
-            assertThat(recuperado.horaOnibus()).isEqualTo(Horario.parse("16:45"));
-        }
+        assertThat(recuperado.data()).isEqualTo(LocalDate.of(2026, 9, 15));
+        assertThat(recuperado.trechos()).hasSize(2);
 
-        @Test
-        @DisplayName("BigDecimal com 2 casas é preservado")
-        void bigDecimalPreservado() {
-            Lancamento original = lancamento(
-                    15, "07:45", "07:30", "20.55", "17:00", "16:45", "22.75");
+        Trecho ida = recuperado.trechos().get(0);
+        assertThat(ida.horaReferencia()).isEqualTo(Horario.parse("07:45"));
+        assertThat(ida.horaComparada()).isEqualTo(Horario.parse("07:30"));
 
-            Lancamento salvo = repository.salvar(original);
-            Lancamento recuperado = repository.buscarPorId(salvo.id()).orElseThrow();
+        Trecho volta = recuperado.trechos().get(1);
+        assertThat(volta.horaReferencia()).isEqualTo(Horario.parse("17:00"));
+        assertThat(volta.horaComparada()).isEqualTo(Horario.parse("16:45"));
+    }
 
-            assertThat(recuperado.valorIda()).isEqualByComparingTo("20.55");
-            assertThat(recuperado.valorVolta()).isEqualByComparingTo("22.75");
-        }
+    @Test
+    @DisplayName("BigDecimal com 2 casas é preservado")
+    void bigDecimalPreservado() {
+        Lancamento original = lancamento(
+                15, "07:45", "07:30", "20.55", "17:00", "16:45", "22.75");
 
-        @Test
-        @DisplayName("hora com minutos é persistida e recuperada como HH:mm")
-        void horaComMinutosPreservada() {
-            Lancamento original = lancamento(
-                    15, "07:05", "07:00", "20.00", "17:05", "17:00", "22.00");
+        Lancamento salvo = repository.salvar(original);
+        Lancamento recuperado = repository.buscarPorId(salvo.id()).orElseThrow();
 
-            Lancamento salvo = repository.salvar(original);
-            Lancamento recuperado = repository.buscarPorId(salvo.id()).orElseThrow();
+        assertThat(recuperado.trechos().get(0).valor()).isEqualByComparingTo("20.55");
+        assertThat(recuperado.trechos().get(1).valor()).isEqualByComparingTo("22.75");
+    }
 
-            // Garante que o zero à esquerda foi preservado
-            assertThat(recuperado.horaDescida().formatado()).isEqualTo("07:05");
-            assertThat(recuperado.horaSaida().formatado()).isEqualTo("17:05");
+    @Test
+    @DisplayName("hora com minutos é persistida e recuperada como HH:mm")
+    void horaComMinutosPreservada() {
+        Lancamento original = lancamento(
+                15, "07:05", "07:00", "20.00", "17:05", "17:00", "22.00");
+
+        Lancamento salvo = repository.salvar(original);
+        Lancamento recuperado = repository.buscarPorId(salvo.id()).orElseThrow();
+
+        // Garante que o zero à esquerda foi preservado
+        assertThat(recuperado.trechos().get(0).horaReferencia().formatado())
+                .isEqualTo("07:05");
+        assertThat(recuperado.trechos().get(1).horaReferencia().formatado())
+                .isEqualTo("17:05");
         }
     }
 

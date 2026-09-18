@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,19 +18,26 @@ class LancamentoTest {
     private static final Long ID_NULO = null;
     private static final Long SERVIDOR_ID = 1L;
     private static final LocalDate DATA = LocalDate.of(2026, 9, 15);
-    private static final Horario DESCIDA = Horario.parse("07:45");
-    private static final Horario ENTRADA = Horario.parse("07:30");
-    private static final BigDecimal VALOR_IDA = new BigDecimal("20.00");
-    private static final Horario SAIDA = Horario.parse("17:00");
-    private static final Horario ONIBUS = Horario.parse("16:45");
-    private static final BigDecimal VALOR_VOLTA = new BigDecimal("22.00");
+
+    // Helpers
+    private Trecho trecho(String referencia, String comparada, String valor) {
+        return new Trecho(
+                Horario.parse(referencia),
+                Horario.parse(comparada),
+                new BigDecimal(valor)
+        );
+    }
+
+    private Trecho ida() {
+        return trecho("07:45", "07:30", "20.00");
+    }
+
+    private Trecho volta() {
+        return trecho("17:00", "16:45", "22.00");
+    }
 
     private Lancamento lancamentoValido() {
-        return new Lancamento(
-                ID_NULO, SERVIDOR_ID, DATA,
-                DESCIDA, ENTRADA, VALOR_IDA,
-                SAIDA, ONIBUS, VALOR_VOLTA
-        );
+        return new Lancamento(ID_NULO, SERVIDOR_ID, DATA, List.of(ida(), volta()));
     }
 
     // Criação válida
@@ -45,12 +53,8 @@ class LancamentoTest {
             assertThat(l.id()).isNull();
             assertThat(l.servidorId()).isEqualTo(SERVIDOR_ID);
             assertThat(l.data()).isEqualTo(DATA);
-            assertThat(l.horaDescida()).isEqualTo(DESCIDA);
-            assertThat(l.horaEntrada()).isEqualTo(ENTRADA);
-            assertThat(l.valorIda()).isEqualByComparingTo(VALOR_IDA);
-            assertThat(l.horaSaida()).isEqualTo(SAIDA);
-            assertThat(l.horaOnibus()).isEqualTo(ONIBUS);
-            assertThat(l.valorVolta()).isEqualByComparingTo(VALOR_VOLTA);
+            assertThat(l.trechos()).hasSize(2);
+            assertThat(l.getQuantidadeTrechos()).isEqualTo(2);
         }
 
         @Test
@@ -64,23 +68,55 @@ class LancamentoTest {
         @DisplayName("deve aceitar id preenchido (após persistir)")
         void deveAceitarIdPreenchido() {
             Lancamento l = new Lancamento(
-                    99L, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            );
+                    99L, SERVIDOR_ID, DATA, List.of(ida(), volta()));
             assertThat(l.id()).isEqualTo(99L);
         }
 
         @Test
-        @DisplayName("deve aceitar valor zero")
-        void deveAceitarValorZero() {
+        @DisplayName("deve aceitar 1 trecho (só ida)")
+        void deveAceitarUmTrecho() {
+            Lancamento l = new Lancamento(
+                    ID_NULO, SERVIDOR_ID, DATA, List.of(ida()));
+
+            assertThat(l.trechos()).hasSize(1);
+            assertThat(l.getQuantidadeTrechos()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("deve aceitar 3 trechos")
+        void deveAceitarTresTrechos() {
+            Trecho conexao = trecho("12:00", "11:45", "15.00");
+
+            Lancamento l = new Lancamento(
+                    ID_NULO, SERVIDOR_ID, DATA, List.of(ida(), conexao, volta()));
+
+            assertThat(l.trechos()).hasSize(3);
+        }
+
+        @Test
+        @DisplayName("deve aceitar 4 trechos")
+        void deveAceitarQuatroTrechos() {
+            Trecho conexao1 = trecho("12:00", "11:45", "15.00");
+            Trecho conexao2 = trecho("14:00", "13:45", "10.00");
+
             Lancamento l = new Lancamento(
                     ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, BigDecimal.ZERO,
-                    SAIDA, ONIBUS, BigDecimal.ZERO
-            );
-            assertThat(l.valorIda()).isEqualByComparingTo("0.00");
-            assertThat(l.valorVolta()).isEqualByComparingTo("0.00");
+                    List.of(ida(), conexao1, conexao2, volta()));
+
+            assertThat(l.trechos()).hasSize(4);
+        }
+
+        @Test
+        @DisplayName("deve preservar a ordem dos trechos")
+        void devePreservarOrdemDosTrechos() {
+            Trecho primeira = ida();
+            Trecho segunda = volta();
+
+            Lancamento l = new Lancamento(
+                    ID_NULO, SERVIDOR_ID, DATA, List.of(primeira, segunda));
+
+            assertThat(l.trechos().get(0)).isEqualTo(primeira);
+            assertThat(l.trechos().get(1)).isEqualTo(segunda);
         }
     }
 
@@ -93,10 +129,7 @@ class LancamentoTest {
         @DisplayName("deve lançar exceção quando servidorId for nulo")
         void deveLancarExcecaoQuandoServidorIdForNulo() {
             assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, null, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            ))
+                    ID_NULO, null, DATA, List.of(ida(), volta())))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Servidor");
         }
@@ -105,114 +138,55 @@ class LancamentoTest {
         @DisplayName("deve lançar exceção quando data for nula")
         void deveLancarExcecaoQuandoDataForNula() {
             assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, null,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            ))
+                    ID_NULO, SERVIDOR_ID, null, List.of(ida(), volta())))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Data");
         }
 
         @Test
-        @DisplayName("deve lançar exceção quando horaDescida for nula")
-        void deveLancarExcecaoQuandoHoraDescidaForNula() {
+        @DisplayName("deve lançar exceção quando lista de trechos for nula")
+        void deveLancarExcecaoQuandoTrechosForemNulos() {
             assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    null, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            ))
+                    ID_NULO, SERVIDOR_ID, DATA, null))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("descida");
+                    .hasMessageContaining("Trechos");
         }
 
         @Test
-        @DisplayName("deve lançar exceção quando horaEntrada for nula")
-        void deveLancarExcecaoQuandoHoraEntradaForNula() {
+        @DisplayName("deve lançar exceção quando lista de trechos for vazia")
+        void deveLancarExcecaoQuandoTrechosForemVazios() {
             assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, null, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            ))
+                    ID_NULO, SERVIDOR_ID, DATA, List.of()))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("entrada");
-        }
-
-        @Test
-        @DisplayName("deve lançar exceção quando horaSaida for nula")
-        void deveLancarExcecaoQuandoHoraSaidaForNula() {
-            assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    null, ONIBUS, VALOR_VOLTA
-            ))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("saída");
-        }
-
-        @Test
-        @DisplayName("deve lançar exceção quando horaOnibus for nula")
-        void deveLancarExcecaoQuandoHoraOnibusForNula() {
-            assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, null, VALOR_VOLTA
-            ))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("ônibus");
-        }
-
-        @Test
-        @DisplayName("deve lançar exceção quando valorIda for nulo")
-        void deveLancarExcecaoQuandoValorIdaForNulo() {
-            assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, null,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            ))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Valor");
-        }
-
-        @Test
-        @DisplayName("deve lançar exceção quando valorVolta for nulo")
-        void deveLancarExcecaoQuandoValorVoltaForNulo() {
-            assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, null
-            ))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Valor");
+                    .hasMessageContaining("pelo menos um trecho");
         }
     }
 
-    // Validações de valores
+    // Acesso a trechos
     @Nested
-    @DisplayName("Validações de valores")
-    class ValidacoesDeValores {
+    @DisplayName("Acesso a trechos")
+    class AcessoATrechos {
 
         @Test
-        @DisplayName("deve lançar exceção quando valorIda for negativo")
-        void deveLancarExcecaoQuandoValorIdaForNegativo() {
-            assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, new BigDecimal("-0.01"),
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            ))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("negativo");
+        @DisplayName("l.trechos() retorna lista imutável")
+        void trechosRetornaListaImutavel() {
+            Lancamento l = lancamentoValido();
+
+            assertThatThrownBy(() -> l.trechos().add(null))
+                    .isInstanceOf(UnsupportedOperationException.class);
         }
 
         @Test
-        @DisplayName("deve lançar exceção quando valorVolta for negativo")
-        void deveLancarExcecaoQuandoValorVoltaForNegativo() {
-            assertThatThrownBy(() -> new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, new BigDecimal("-0.01")
-            ))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("negativo");
+        @DisplayName("alterar a lista original após a criação não afeta o Lancamento")
+        void alterarListaOriginalNaoAfeta() {
+            List<Trecho> original = new java.util.ArrayList<>();
+            original.add(ida());
+
+            Lancamento l = new Lancamento(ID_NULO, SERVIDOR_ID, DATA, original);
+
+            original.add(volta());
+
+            assertThat(l.trechos()).hasSize(1);
         }
     }
 
@@ -221,52 +195,54 @@ class LancamentoTest {
     @DisplayName("Normalização de valores")
     class NormalizacaoValores {
 
-        private Lancamento comValorIda(String valor) {
-            return new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, new BigDecimal(valor),
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            );
+        private Lancamento comValorDoTrecho(String valor) {
+            Trecho trecho = trecho("07:45", "07:30", valor);
+            return new Lancamento(ID_NULO, SERVIDOR_ID, DATA, List.of(trecho));
         }
 
         @Test
         @DisplayName("deve normalizar 20.5 para 20.50")
         void deveNormalizarUmaCasaDecimal() {
-            Lancamento l = comValorIda("20.5");
-            assertThat(l.valorIda()).isEqualByComparingTo("20.50");
-            assertThat(l.valorIda().scale()).isEqualTo(2);
+            Lancamento l = comValorDoTrecho("20.5");
+            Trecho t = l.trechos().get(0);
+            assertThat(t.valor()).isEqualByComparingTo("20.50");
+            assertThat(t.valor().scale()).isEqualTo(2);
         }
 
         @Test
         @DisplayName("deve normalizar 20 para 20.00")
         void deveNormalizarSemCasasDecimais() {
-            Lancamento l = comValorIda("20");
-            assertThat(l.valorIda()).isEqualByComparingTo("20.00");
-            assertThat(l.valorIda().scale()).isEqualTo(2);
+            Lancamento l = comValorDoTrecho("20");
+            Trecho t = l.trechos().get(0);
+            assertThat(t.valor()).isEqualByComparingTo("20.00");
+            assertThat(t.valor().scale()).isEqualTo(2);
         }
 
         @Test
         @DisplayName("deve arredondar 20.555 para 20.56 (HALF_UP)")
         void deveArredondarTresCasas() {
-            Lancamento l = comValorIda("20.555");
-            assertThat(l.valorIda()).isEqualByComparingTo("20.56");
-            assertThat(l.valorIda().scale()).isEqualTo(2);
+            Lancamento l = comValorDoTrecho("20.555");
+            Trecho t = l.trechos().get(0);
+            assertThat(t.valor()).isEqualByComparingTo("20.56");
+            assertThat(t.valor().scale()).isEqualTo(2);
         }
 
         @Test
         @DisplayName("deve arredondar 20.554 para 20.55 (HALF_UP)")
         void deveArredondarParaBaixo() {
-            Lancamento l = comValorIda("20.554");
-            assertThat(l.valorIda()).isEqualByComparingTo("20.55");
-            assertThat(l.valorIda().scale()).isEqualTo(2);
+            Lancamento l = comValorDoTrecho("20.554");
+            Trecho t = l.trechos().get(0);
+            assertThat(t.valor()).isEqualByComparingTo("20.55");
+            assertThat(t.valor().scale()).isEqualTo(2);
         }
 
         @Test
         @DisplayName("deve manter escala 2 quando já está em escala 2")
         void deveManterEscala2() {
-            Lancamento l = comValorIda("20.50");
-            assertThat(l.valorIda()).isEqualTo(new BigDecimal("20.50"));
-            assertThat(l.valorIda().scale()).isEqualTo(2);
+            Lancamento l = comValorDoTrecho("20.50");
+            Trecho t = l.trechos().get(0);
+            assertThat(t.valor()).isEqualTo(new BigDecimal("20.50"));
+            assertThat(t.valor().scale()).isEqualTo(2);
         }
     }
 
@@ -290,10 +266,7 @@ class LancamentoTest {
         void deveConsiderarDiferentesServidorIdDiferente() {
             Lancamento a = lancamentoValido();
             Lancamento b = new Lancamento(
-                    99L, 2L, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            );
+                    99L, 2L, DATA, List.of(ida(), volta()));
 
             assertThat(a).isNotEqualTo(b);
         }
@@ -304,9 +277,7 @@ class LancamentoTest {
             Lancamento a = lancamentoValido();
             Lancamento b = new Lancamento(
                     ID_NULO, SERVIDOR_ID, LocalDate.of(2026, 9, 16),
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            );
+                    List.of(ida(), volta()));
 
             assertThat(a).isNotEqualTo(b);
         }
@@ -315,29 +286,23 @@ class LancamentoTest {
         @DisplayName("id diferente NÃO afeta igualdade (documenta comportamento)")
         void idDiferenteNaoAfetaIgualdade() {
             Lancamento a = new Lancamento(
-                    1L, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            );
+                    1L, SERVIDOR_ID, DATA, List.of(ida(), volta()));
             Lancamento b = new Lancamento(
-                    2L, SERVIDOR_ID, DATA,
-                    DESCIDA, ENTRADA, VALOR_IDA,
-                    SAIDA, ONIBUS, VALOR_VOLTA
-            );
+                    2L, SERVIDOR_ID, DATA, List.of(ida(), volta()));
 
             assertThat(a).isEqualTo(b);
             assertThat(a.hashCode()).isEqualTo(b.hashCode());
         }
 
         @Test
-        @DisplayName("horários diferentes NÃO afetam igualdade (só servidorId + data importam)")
-        void horariosDiferentesNaoAfetamIgualdade() {
+        @DisplayName("trechos diferentes NÃO afetam igualdade (só servidorId + data importam)")
+        void trechosDiferentesNaoAfetamIgualdade() {
+            Trecho t1 = trecho("08:00", "08:15", "99.99");
+            Trecho t2 = trecho("18:00", "18:15", "99.99");
+
             Lancamento a = lancamentoValido();
             Lancamento b = new Lancamento(
-                    ID_NULO, SERVIDOR_ID, DATA,
-                    Horario.parse("08:00"), Horario.parse("08:15"), new BigDecimal("99.99"),
-                    Horario.parse("18:00"), Horario.parse("18:15"), new BigDecimal("99.99")
-            );
+                    ID_NULO, SERVIDOR_ID, DATA, List.of(t1, t2));
 
             assertThat(a).isEqualTo(b);
         }
@@ -349,7 +314,7 @@ class LancamentoTest {
     class ToString {
 
         @Test
-        @DisplayName("deve conter id, servidorId, data e valores")
+        @DisplayName("deve conter id, servidorId, data e quantidade de trechos")
         void deveConterDadosPrincipais() {
             Lancamento l = lancamentoValido();
             String s = l.toString();
@@ -357,8 +322,7 @@ class LancamentoTest {
             assertThat(s).contains("id=");
             assertThat(s).contains("servidorId=" + SERVIDOR_ID);
             assertThat(s).contains("data=" + DATA);
-            assertThat(s).contains("valorIda=20.00");
-            assertThat(s).contains("valorVolta=22.00");
+            assertThat(s).contains("trechos=2");
         }
 
         @Test

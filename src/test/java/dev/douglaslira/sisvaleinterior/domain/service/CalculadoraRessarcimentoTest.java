@@ -4,6 +4,7 @@ import dev.douglaslira.sisvaleinterior.domain.model.Horario;
 import dev.douglaslira.sisvaleinterior.domain.model.Lancamento;
 import dev.douglaslira.sisvaleinterior.domain.model.ResultadoDia;
 import dev.douglaslira.sisvaleinterior.domain.model.ResultadoMes;
+import dev.douglaslira.sisvaleinterior.domain.model.Trecho;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,33 +25,64 @@ class CalculadoraRessarcimentoTest {
 
     private final CalculadoraRessarcimento calculadora = new CalculadoraRessarcimento();
 
-    // Helpers — evitam repetir 9 parâmetros em cada teste
-    private Lancamento lancamento(int dia, String descida, String entrada, String valorIda, String saida, String onibus, String valorVolta) {
-        return new Lancamento(
-                null, SERVIDOR_ID, LocalDate.of(MES.getYear(), MES.getMonth(), dia),
-                Horario.parse(descida), Horario.parse(entrada), new BigDecimal(valorIda),
-                Horario.parse(saida), Horario.parse(onibus), new BigDecimal(valorVolta)
+    // Helpers
+    /** Trecho genérico. */
+    private Trecho trecho(String referencia, String comparada, String valor) {
+        return new Trecho(
+                Horario.parse(referencia),
+                Horario.parse(comparada),
+                new BigDecimal(valor)
         );
     }
 
-    /** Ida válida (07:45 → 07:30) + volta válida (17:00 → 16:45). */
+    /** Trecho de ida válido (07:45 → 07:30 = 15 min antes, no limite). */
+    private Trecho trechoIdaValido() {
+        return trecho("07:45", "07:30", "20.00");
+    }
+
+    /** Trecho de ida inválido (07:45 → 07:00 = 45 min antes). */
+    private Trecho trechoIdaInvalido() {
+        return trecho("07:45", "07:00", "20.00");
+    }
+
+    /** Trecho de volta válido (17:00 → 16:45 = 15 min antes, no limite). */
+    private Trecho trechoVoltaValido() {
+        return trecho("17:00", "16:45", "22.00");
+    }
+
+    /** Trecho de volta inválido (17:00 → 16:30 = 30 min antes). */
+    private Trecho trechoVoltaInvalido() {
+        return trecho("17:00", "16:30", "22.00");
+    }
+
+    /** Cria um lançamento com os trechos informados. */
+    private Lancamento lancamento(int dia, Trecho... trechos) {
+        return new Lancamento(
+                null,
+                SERVIDOR_ID,
+                LocalDate.of(MES.getYear(), MES.getMonth(), dia),
+                List.of(trechos)
+        );
+    }
+
+    /** Lançamento com 2 trechos válidos (ida + volta) → 42.00. */
     private Lancamento diaAmbosValidos(int dia) {
-        return lancamento(dia, "07:45", "07:30", "20.00", "17:00", "16:45", "22.00");
+        return lancamento(dia, trechoIdaValido(), trechoVoltaValido());
     }
 
-    /** Ida válida + volta inválida (17:00 → 16:30 = 30 min antes). */
+    /** Lançamento com ida válida e volta inválida → 20.00. */
     private Lancamento diaSoIda(int dia) {
-        return lancamento(dia, "07:45", "07:30", "20.00", "17:00", "16:30", "22.00");
+        return lancamento(dia, trechoIdaValido(), trechoVoltaInvalido());
     }
 
-    /** Ida inválida (07:45 → 07:00 = 45 min antes) + volta válida. */
+    /** Lançamento com ida inválida e volta válida → 22.00. */
     private Lancamento diaSoVolta(int dia) {
-        return lancamento(dia, "07:45", "07:00", "20.00", "17:00", "16:45", "22.00");
+        return lancamento(dia, trechoIdaInvalido(), trechoVoltaValido());
     }
 
-    /** Ida inválida + volta inválida. */
+    /** Lançamento com os dois trechos inválidos → 0.00. */
     private Lancamento diaNenhumValido(int dia) {
-        return lancamento(dia, "07:45", "07:00", "20.00", "17:00", "16:30", "22.00");
+        return lancamento(dia, trechoIdaInvalido(), trechoVoltaInvalido());
     }
 
     // Cálculo do dia
@@ -63,8 +95,9 @@ class CalculadoraRessarcimentoTest {
         void ambosValidosSoma() {
             ResultadoDia resultado = calculadora.calcularDia(diaAmbosValidos(15));
 
-            assertThat(resultado.validacaoIda().valido()).isTrue();
-            assertThat(resultado.validacaoVolta().valido()).isTrue();
+            assertThat(resultado.resultados()).hasSize(2);
+            assertThat(resultado.resultados().get(0).validacao().valido()).isTrue();
+            assertThat(resultado.resultados().get(1).validacao().valido()).isTrue();
             assertThat(resultado.valorTotalDia()).isEqualByComparingTo("42.00");
             assertThat(resultado.totalmenteValido()).isTrue();
         }
@@ -74,8 +107,8 @@ class CalculadoraRessarcimentoTest {
         void soIdaValidaSoma() {
             ResultadoDia resultado = calculadora.calcularDia(diaSoIda(15));
 
-            assertThat(resultado.validacaoIda().valido()).isTrue();
-            assertThat(resultado.validacaoVolta().valido()).isFalse();
+            assertThat(resultado.resultados().get(0).validacao().valido()).isTrue();
+            assertThat(resultado.resultados().get(1).validacao().valido()).isFalse();
             assertThat(resultado.valorTotalDia()).isEqualByComparingTo("20.00");
             assertThat(resultado.parcialmenteValido()).isTrue();
         }
@@ -85,8 +118,8 @@ class CalculadoraRessarcimentoTest {
         void soVoltaValidaSoma() {
             ResultadoDia resultado = calculadora.calcularDia(diaSoVolta(15));
 
-            assertThat(resultado.validacaoIda().valido()).isFalse();
-            assertThat(resultado.validacaoVolta().valido()).isTrue();
+            assertThat(resultado.resultados().get(0).validacao().valido()).isFalse();
+            assertThat(resultado.resultados().get(1).validacao().valido()).isTrue();
             assertThat(resultado.valorTotalDia()).isEqualByComparingTo("22.00");
             assertThat(resultado.parcialmenteValido()).isTrue();
         }
@@ -96,8 +129,8 @@ class CalculadoraRessarcimentoTest {
         void nenhumValidoTotalZero() {
             ResultadoDia resultado = calculadora.calcularDia(diaNenhumValido(15));
 
-            assertThat(resultado.validacaoIda().valido()).isFalse();
-            assertThat(resultado.validacaoVolta().valido()).isFalse();
+            assertThat(resultado.resultados().get(0).validacao().valido()).isFalse();
+            assertThat(resultado.resultados().get(1).validacao().valido()).isFalse();
             assertThat(resultado.valorTotalDia()).isEqualByComparingTo("0.00");
             assertThat(resultado.totalmenteInvalido()).isTrue();
         }
@@ -116,6 +149,55 @@ class CalculadoraRessarcimentoTest {
             assertThatThrownBy(() -> calculadora.calcularDia(null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Lançamento");
+        }
+
+        @Test
+        @DisplayName("dia com 3 trechos válidos soma corretamente")
+        void diaComTresTrechosValidos() {
+            Lancamento l = lancamento(15,
+                    trecho("07:00", "06:45", "10.00"),
+                    trecho("12:00", "11:45", "15.00"),
+                    trecho("17:00", "16:45", "20.00")
+            );
+
+            ResultadoDia resultado = calculadora.calcularDia(l);
+
+            assertThat(resultado.resultados()).hasSize(3);
+            assertThat(resultado.valorTotalDia()).isEqualByComparingTo("45.00");
+            assertThat(resultado.totalmenteValido()).isTrue();
+        }
+
+        @Test
+        @DisplayName("dia com 4 trechos mistos soma apenas os válidos")
+        void diaComQuatroTrechosMistos() {
+            Lancamento l = lancamento(15,
+                    trechoIdaValido(),           // válido 20.00
+                    trechoVoltaInvalido(),       // inválido
+                    trecho("12:00", "11:45", "15.00"),   // válido 15.00
+                    trecho("17:00", "17:30", "22.00")    // válido (depois)
+            );
+
+            ResultadoDia resultado = calculadora.calcularDia(l);
+
+            assertThat(resultado.resultados()).hasSize(4);
+            assertThat(resultado.valorTotalDia()).isEqualByComparingTo("57.00");
+            assertThat(resultado.parcialmenteValido()).isTrue();
+        }
+
+        @Test
+        @DisplayName("dia com todos os trechos inválidos → total zero")
+        void diaComTodosInvalidos() {
+            Lancamento l = lancamento(15,
+                    trechoIdaInvalido(),
+                    trechoVoltaInvalido(),
+                    trecho("08:00", "07:00", "5.00")
+            );
+
+            ResultadoDia resultado = calculadora.calcularDia(l);
+
+            assertThat(resultado.resultados()).hasSize(3);
+            assertThat(resultado.valorTotalDia()).isEqualByComparingTo("0.00");
+            assertThat(resultado.totalmenteInvalido()).isTrue();
         }
     }
 
@@ -169,9 +251,10 @@ class CalculadoraRessarcimentoTest {
         void filtraLancamentosDeOutroMes() {
             Lancamento setembro = diaAmbosValidos(15);
             Lancamento outubro = new Lancamento(
-                    null, SERVIDOR_ID, LocalDate.of(2026, 10, 15),
-                    Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                    Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                    null,
+                    SERVIDOR_ID,
+                    LocalDate.of(2026, 10, 15),
+                    List.of(trechoIdaValido(), trechoVoltaValido())
             );
 
             ResultadoMes resultado = calculadora.calcularMes(
@@ -216,7 +299,7 @@ class CalculadoraRessarcimentoTest {
         }
     }
 
-    // Ordenação da lista de dias
+    // Ordenação
     @Nested
     @DisplayName("Ordenação dos dias")
     class Ordenacao {
@@ -242,7 +325,7 @@ class CalculadoraRessarcimentoTest {
         }
     }
 
-    // Filtros do ResultadoMes
+    // Filtros
     @Nested
     @DisplayName("Filtros do resultado do mês")
     class Filtros {
@@ -303,12 +386,12 @@ class CalculadoraRessarcimentoTest {
         @Test
         @DisplayName("valores com centavos somam corretamente")
         void valoresComCentavos() {
-            Lancamento lancamento = lancamento(
-                    15, "07:45", "07:30", "20.50",
-                    "17:00", "16:45", "22.75"
+            Lancamento l = lancamento(15,
+                    trecho("07:45", "07:30", "20.50"),
+                    trecho("17:00", "16:45", "22.75")
             );
 
-            ResultadoDia resultado = calculadora.calcularDia(lancamento);
+            ResultadoDia resultado = calculadora.calcularDia(l);
 
             assertThat(resultado.valorTotalDia()).isEqualByComparingTo("43.25");
         }

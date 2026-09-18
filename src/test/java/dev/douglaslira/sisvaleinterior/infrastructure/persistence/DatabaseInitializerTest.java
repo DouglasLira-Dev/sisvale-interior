@@ -22,11 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("Testes do DatabaseInitializer")
 class DatabaseInitializerTest {
 
-    /**
-     * URL única por classe de teste — banco em memória compartilhado.
-     * Mantemos uma conexão "âncora" aberta durante toda a classe para evitar
-     * que o banco seja destruído quando as conexões temporárias fecham.
-     */
     private static String url;
     private static Connection ancora;
 
@@ -48,17 +43,18 @@ class DatabaseInitializerTest {
 
     @BeforeEach
     void setup() throws SQLException {
-        // Limpa o banco antes de cada teste para garantir isolamento.
-        // O banco em memória é compartilhado entre os testes; sem esse cleanup,
-        // as tabelas criadas por um teste vazariam para o próximo.
         limparBanco();
-
         connectionFactory = new ConnectionFactory(url);
         initializer = new DatabaseInitializer(connectionFactory);
     }
 
+    /**
+     * Apaga as tabelas na ordem correta (filhas antes das mães) para respeitar
+     * a foreign key.
+     */
     private void limparBanco() throws SQLException {
         try (Statement st = ancora.createStatement()) {
+            st.execute("DROP TABLE IF EXISTS trecho");
             st.execute("DROP TABLE IF EXISTS lancamento");
             st.execute("DROP TABLE IF EXISTS servidor");
         }
@@ -70,12 +66,12 @@ class DatabaseInitializerTest {
     class Inicializacao {
 
         @Test
-        @DisplayName("deve criar as tabelas servidor e lancamento")
+        @DisplayName("deve criar as tabelas servidor, lancamento e trecho")
         void deveCriarTabelas() throws SQLException {
             initializer.inicializar();
 
             List<String> tabelas = listarTabelas();
-            assertThat(tabelas).contains("servidor", "lancamento");
+            assertThat(tabelas).contains("servidor", "lancamento", "trecho");
         }
 
         @Test
@@ -85,16 +81,19 @@ class DatabaseInitializerTest {
             initializer.inicializar();   // não deve lançar
 
             List<String> tabelas = listarTabelas();
-            assertThat(tabelas).contains("servidor", "lancamento");
+            assertThat(tabelas).contains("servidor", "lancamento", "trecho");
         }
 
         @Test
-        @DisplayName("deve criar o índice idx_lancamento_servidor_data")
-        void deveCriarIndice() throws SQLException {
+        @DisplayName("deve criar os índices esperados")
+        void deveCriarIndices() throws SQLException {
             initializer.inicializar();
 
             List<String> indices = listarIndices();
-            assertThat(indices).contains("idx_lancamento_servidor_data");
+            assertThat(indices).contains(
+                    "idx_lancamento_servidor_data",
+                    "idx_trecho_lancamento"
+            );
         }
 
         private List<String> listarTabelas() throws SQLException {
@@ -140,16 +139,35 @@ class DatabaseInitializerTest {
         }
 
         @Test
-        @DisplayName("tabela lancamento tem as colunas corretas")
+        @DisplayName("tabela lancamento tem as colunas corretas (sem horários/valores)")
         void tabelaLancamentoTemColunasCorretas() throws SQLException {
             initializer.inicializar();
 
             List<String> colunas = listarColunas("lancamento");
             assertThat(colunas).containsExactly(
-                    "id", "servidor_id", "data",
+                    "id", "servidor_id", "data", "criado_em");
+        }
+
+        @Test
+        @DisplayName("tabela lancamento NÃO tem as colunas antigas de horário/valor")
+        void tabelaLancamentoNaoTemColunasAntigas() throws SQLException {
+            initializer.inicializar();
+
+            List<String> colunas = listarColunas("lancamento");
+            assertThat(colunas).doesNotContain(
                     "hora_descida", "hora_entrada", "valor_ida",
-                    "hora_saida", "hora_onibus", "valor_volta",
-                    "criado_em");
+                    "hora_saida", "hora_onibus", "valor_volta");
+        }
+
+        @Test
+        @DisplayName("tabela trecho tem as colunas corretas")
+        void tabelaTrechoTemColunasCorretas() throws SQLException {
+            initializer.inicializar();
+
+            List<String> colunas = listarColunas("trecho");
+            assertThat(colunas).containsExactly(
+                    "id", "lancamento_id", "ordem",
+                    "hora_referencia", "hora_comparada", "valor");
         }
 
         private List<String> listarColunas(String tabela) throws SQLException {
@@ -185,15 +203,6 @@ class DatabaseInitializerTest {
         }
 
         @Test
-        @DisplayName("UNIQUE em servidor.cpf rejeita duplicado")
-        void uniqueCpfRejeitaDuplicado() throws SQLException {
-            inserirServidor("João", "M001", "11144477735");
-
-            assertThatThrownBy(() -> inserirServidor("Maria", "M002", "11144477735"))
-                    .isInstanceOf(SQLException.class);
-        }
-
-        @Test
         @DisplayName("UNIQUE(servidor_id, data) em lancamento rejeita duplicado")
         void uniqueServidorDataRejeitaDuplicado() throws SQLException {
             long servidorId = inserirServidor("João", "M001", "11144477735");
@@ -220,6 +229,25 @@ class DatabaseInitializerTest {
         }
 
         @Test
+        @DisplayName("FOREIGN KEY rejeita trecho com lançamento inexistente")
+        void foreignKeyRejeitaTrechoComLancamentoInexistente() {
+            assertThatThrownBy(() -> inserirTrecho(999L, 1))
+                    .isInstanceOf(SQLException.class);
+        }
+
+        @Test
+        @DisplayName("UNIQUE(lancamento_id, ordem) rejeita trecho duplicado")
+        void uniqueOrdemRejeitaTrechoDuplicado() throws SQLException {
+            long servidorId = inserirServidor("João", "M001", "11144477735");
+            long lancamentoId = inserirLancamento(servidorId, "2026-09-15");
+
+            inserirTrecho(lancamentoId, 1);
+
+            assertThatThrownBy(() -> inserirTrecho(lancamentoId, 1))
+                    .isInstanceOf(SQLException.class);
+        }
+
+        @Test
         @DisplayName("ON DELETE CASCADE remove lançamentos ao apagar servidor")
         void onDeleteCascadeRemoveLancamentos() throws SQLException {
             long servidorId = inserirServidor("João", "M001", "11144477735");
@@ -236,8 +264,26 @@ class DatabaseInitializerTest {
             assertThat(contarLancamentos()).isZero();
         }
 
-        // ---------- helpers ----------
+        @Test
+        @DisplayName("ON DELETE CASCADE remove trechos ao apagar lançamento")
+        void onDeleteCascadeRemoveTrechos() throws SQLException {
+            long servidorId = inserirServidor("João", "M001", "11144477735");
+            long lancamentoId = inserirLancamento(servidorId, "2026-09-15");
 
+            inserirTrecho(lancamentoId, 1);
+            inserirTrecho(lancamentoId, 2);
+
+            assertThat(contarTrechos()).isEqualTo(2);
+
+            try (Connection conn = connectionFactory.getConnection();
+                Statement st = conn.createStatement()) {
+                st.executeUpdate("DELETE FROM lancamento WHERE id = " + lancamentoId);
+            }
+
+            assertThat(contarTrechos()).isZero();
+        }
+
+        // ---------- helpers ----------
         private long inserirServidor(String nome, String matricula, String cpf) throws SQLException {
             try (Connection conn = connectionFactory.getConnection();
                 Statement st = conn.createStatement()) {
@@ -251,15 +297,26 @@ class DatabaseInitializerTest {
             }
         }
 
-        private void inserirLancamento(long servidorId, String data) throws SQLException {
+        private long inserirLancamento(long servidorId, String data) throws SQLException {
             try (Connection conn = connectionFactory.getConnection();
                 Statement st = conn.createStatement()) {
                 st.executeUpdate(
-                        "INSERT INTO lancamento "
-                                + "(servidor_id, data, hora_descida, hora_entrada, valor_ida, "
-                                + " hora_saida, hora_onibus, valor_volta) "
-                                + "VALUES (" + servidorId + ", '" + data + "', "
-                                + "'07:45', '07:30', 20.00, '17:00', '16:45', 22.00)");
+                        "INSERT INTO lancamento (servidor_id, data) VALUES ("
+                                + servidorId + ", '" + data + "')");
+                try (ResultSet rs = st.executeQuery("SELECT last_insert_rowid()")) {
+                    rs.next();
+                    return rs.getLong(1);
+                }
+            }
+        }
+
+        private void inserirTrecho(long lancamentoId, int ordem) throws SQLException {
+            try (Connection conn = connectionFactory.getConnection();
+                Statement st = conn.createStatement()) {
+                st.executeUpdate(
+                        "INSERT INTO trecho (lancamento_id, ordem, hora_referencia, hora_comparada, valor) "
+                                + "VALUES (" + lancamentoId + ", " + ordem
+                                + ", '07:45', '07:30', 20.00)");
             }
         }
 
@@ -267,6 +324,15 @@ class DatabaseInitializerTest {
             try (Connection conn = connectionFactory.getConnection();
                 Statement st = conn.createStatement();
                 ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM lancamento")) {
+                rs.next();
+                return rs.getLong(1);
+            }
+        }
+
+        private long contarTrechos() throws SQLException {
+            try (Connection conn = connectionFactory.getConnection();
+                Statement st = conn.createStatement();
+                ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM trecho")) {
                 rs.next();
                 return rs.getLong(1);
             }

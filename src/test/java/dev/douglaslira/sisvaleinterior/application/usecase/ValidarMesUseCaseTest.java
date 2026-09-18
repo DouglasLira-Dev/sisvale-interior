@@ -3,17 +3,15 @@ package dev.douglaslira.sisvaleinterior.application.usecase;
 import dev.douglaslira.sisvaleinterior.application.dto.ResumoMensalDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.StatusDia;
 import dev.douglaslira.sisvaleinterior.application.exception.ApplicationException;
-
 import dev.douglaslira.sisvaleinterior.domain.model.Horario;
 import dev.douglaslira.sisvaleinterior.domain.model.Lancamento;
 import dev.douglaslira.sisvaleinterior.domain.model.Servidor;
+import dev.douglaslira.sisvaleinterior.domain.model.Trecho;
 import dev.douglaslira.sisvaleinterior.domain.service.CalculadoraRessarcimento;
-
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.ConnectionFactory;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.DatabaseInitializer;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.LancamentoRepositoryJdbc;
 import dev.douglaslira.sisvaleinterior.infrastructure.persistence.ServidorRepositoryJdbc;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +24,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,53 +69,72 @@ class ValidarMesUseCaseTest {
     }
 
     // Helpers
+    /** Trecho genérico. */
+    private Trecho trecho(String referencia, String comparada, String valor) {
+        return new Trecho(
+                Horario.parse(referencia),
+                Horario.parse(comparada),
+                new BigDecimal(valor)
+        );
+    }
+
+    /** Trecho de ida válido (07:45 → 07:30 = 15 min antes, limite). */
+    private Trecho idaValida() {
+        return trecho("07:45", "07:30", "20.00");
+    }
+
+    /** Trecho de ida inválido (07:45 → 07:00 = 45 min antes). */
+    private Trecho idaInvalida() {
+        return trecho("07:45", "07:00", "20.00");
+    }
+
+    /** Trecho de volta válido (17:00 → 16:45 = 15 min antes, limite). */
+    private Trecho voltaValida() {
+        return trecho("17:00", "16:45", "22.00");
+    }
+
+    /** Trecho de volta inválido (17:00 → 16:30 = 30 min antes). */
+    private Trecho voltaInvalida() {
+        return trecho("17:00", "16:30", "22.00");
+    }
+
     /**
-     * Lançamento com ida e volta válidos.
-     * Ida:   07:45 → 07:30 (15 min antes, limite)
-     * Volta: 17:00 → 16:45 (15 min antes, limite)
-     * Total: 20.00 + 22.00 = 42.00
+     * Lançamento com ida e volta válidos → 42.00.
      */
     private void criarLancamentoAmbosValidos(int dia) {
         lancamentoRepository.salvar(new Lancamento(
                 null, servidorId, LocalDate.of(2026, 9, dia),
-                Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                List.of(idaValida(), voltaValida())
         ));
     }
 
     /**
-     * Ida válida, volta inválida (30 min antes do limite).
-     * Total: 20.00 (só ida)
+     * Ida válida, volta inválida → 20.00 (só ida).
      */
     private void criarLancamentoSoIdaValida(int dia) {
         lancamentoRepository.salvar(new Lancamento(
                 null, servidorId, LocalDate.of(2026, 9, dia),
-                Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                Horario.parse("17:00"), Horario.parse("16:30"), new BigDecimal("22.00")
+                List.of(idaValida(), voltaInvalida())
         ));
     }
 
     /**
-     * Ida inválida (45 min antes do limite), volta válida.
-     * Total: 22.00 (só volta)
+     * Ida inválida, volta válida → 22.00 (só volta).
      */
     private void criarLancamentoSoVoltaValida(int dia) {
         lancamentoRepository.salvar(new Lancamento(
                 null, servidorId, LocalDate.of(2026, 9, dia),
-                Horario.parse("07:45"), Horario.parse("07:00"), new BigDecimal("20.00"),
-                Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                List.of(idaInvalida(), voltaValida())
         ));
     }
 
     /**
-     * Ida e volta inválidos.
-     * Total: 0.00
+     * Ida e volta inválidos → 0.00.
      */
     private void criarLancamentoNenhumValido(int dia) {
         lancamentoRepository.salvar(new Lancamento(
                 null, servidorId, LocalDate.of(2026, 9, dia),
-                Horario.parse("07:45"), Horario.parse("07:00"), new BigDecimal("20.00"),
-                Horario.parse("17:00"), Horario.parse("16:30"), new BigDecimal("22.00")
+                List.of(idaInvalida(), voltaInvalida())
         ));
     }
 
@@ -149,7 +167,7 @@ class ValidarMesUseCaseTest {
         }
     }
 
-    // Mês com lançamentos válidos
+    // Mês com lançamentos válidoS
     @Nested
     @DisplayName("Mês com lançamentos válidos")
     class MesComLancamentosValidos {
@@ -235,14 +253,10 @@ class ValidarMesUseCaseTest {
             ResumoMensalDTO resumo = useCase.executar(servidorId, MES);
 
             assertThat(resumo.dias()).hasSize(4);
-            assertThat(resumo.dias().get(0).status())
-                    .isEqualTo(StatusDia.VALIDO);
-            assertThat(resumo.dias().get(1).status())
-                    .isEqualTo(StatusDia.PARCIAL);
-            assertThat(resumo.dias().get(2).status())
-                    .isEqualTo(StatusDia.PARCIAL);
-            assertThat(resumo.dias().get(3).status())
-                    .isEqualTo(StatusDia.INVALIDO);
+            assertThat(resumo.dias().get(0).status()).isEqualTo(StatusDia.VALIDO);
+            assertThat(resumo.dias().get(1).status()).isEqualTo(StatusDia.PARCIAL);
+            assertThat(resumo.dias().get(2).status()).isEqualTo(StatusDia.PARCIAL);
+            assertThat(resumo.dias().get(3).status()).isEqualTo(StatusDia.INVALIDO);
         }
 
         @Test
@@ -255,10 +269,10 @@ class ValidarMesUseCaseTest {
 
             ResumoMensalDTO resumo = useCase.executar(servidorId, MES);
 
-            assertThat(resumo.dias().get(0).valor()).isEqualByComparingTo("42.00");
-            assertThat(resumo.dias().get(1).valor()).isEqualByComparingTo("20.00");
-            assertThat(resumo.dias().get(2).valor()).isEqualByComparingTo("22.00");
-            assertThat(resumo.dias().get(3).valor()).isEqualByComparingTo("0.00");
+            assertThat(resumo.dias().get(0).valorTotalDia()).isEqualByComparingTo("42.00");
+            assertThat(resumo.dias().get(1).valorTotalDia()).isEqualByComparingTo("20.00");
+            assertThat(resumo.dias().get(2).valorTotalDia()).isEqualByComparingTo("22.00");
+            assertThat(resumo.dias().get(3).valorTotalDia()).isEqualByComparingTo("0.00");
         }
 
         @Test
@@ -290,8 +304,7 @@ class ValidarMesUseCaseTest {
 
             lancamentoRepository.salvar(new Lancamento(
                     null, servidorId, LocalDate.of(2026, 10, 15),
-                    Horario.parse("07:45"), Horario.parse("07:30"), new BigDecimal("20.00"),
-                    Horario.parse("17:00"), Horario.parse("16:45"), new BigDecimal("22.00")
+                    List.of(idaValida(), voltaValida())
             ));
 
             ResumoMensalDTO resumo = useCase.executar(servidorId, MES);
@@ -316,6 +329,7 @@ class ValidarMesUseCaseTest {
     }
 
     // Validação de entrada
+
     @Nested
     @DisplayName("Validação de entrada")
     class ValidacaoDeEntrada {

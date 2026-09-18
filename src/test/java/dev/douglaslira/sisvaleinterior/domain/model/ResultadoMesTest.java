@@ -28,17 +28,37 @@ class ResultadoMesTest {
         return ResultadoValidacao.invalido(-30, "fora da tolerância");
     }
 
-    // Helpers de ResultadoDia
+    // Helpers de ResultadoDia (multi-trecho)
+
+    private Trecho trechoFake() {
+        return new Trecho(
+                Horario.parse("07:45"),
+                Horario.parse("07:30"),
+                new BigDecimal("10.00")
+        );
+    }
+
+    private ResultadoTrecho resultadoValido() {
+        return ResultadoTrecho.de(trechoFake(), valido());
+    }
+
+    private ResultadoTrecho resultadoInvalido() {
+        return ResultadoTrecho.de(trechoFake(), invalido());
+    }
+
     private ResultadoDia diaTotalmenteValido(LocalDate data) {
-        return new ResultadoDia(data, valido(), valido(), new BigDecimal("42.00"));
+        List<ResultadoTrecho> resultados = List.of(resultadoValido(), resultadoValido());
+        return new ResultadoDia(data, resultados, new BigDecimal("42.00"));
     }
 
     private ResultadoDia diaParcial(LocalDate data) {
-        return new ResultadoDia(data, valido(), invalido(), new BigDecimal("20.00"));
+        List<ResultadoTrecho> resultados = List.of(resultadoValido(), resultadoInvalido());
+        return new ResultadoDia(data, resultados, new BigDecimal("20.00"));
     }
 
     private ResultadoDia diaTotalmenteInvalido(LocalDate data) {
-        return new ResultadoDia(data, invalido(), invalido(), BigDecimal.ZERO);
+        List<ResultadoTrecho> resultados = List.of(resultadoInvalido(), resultadoInvalido());
+        return new ResultadoDia(data, resultados, BigDecimal.ZERO);
     }
 
     private ResultadoMes comDias(List<ResultadoDia> dias) {

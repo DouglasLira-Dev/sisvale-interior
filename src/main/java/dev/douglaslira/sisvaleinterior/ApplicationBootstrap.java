@@ -87,18 +87,13 @@ public class ApplicationBootstrap {
         CalculadoraRessarcimento calculadora = new CalculadoraRessarcimento(validador);
 
         CadastrarServidorUseCase cadastrarServidor = new CadastrarServidorUseCase(servidorRepo);
-
         DesativarServidorUseCase desativarServidor = new DesativarServidorUseCase(servidorRepo);
-
         RemoverServidorUseCase removerServidor = new RemoverServidorUseCase(servidorRepo, lancamentoRepo);
-
         ListarServidoresUseCase listarServidores = new ListarServidoresUseCase(servidorRepo);
 
         RegistrarLancamentoUseCase registrarLancamento =
                 new RegistrarLancamentoUseCase(lancamentoRepo, servidorRepo);
-
         RemoverLancamentoUseCase removerLancamento = new RemoverLancamentoUseCase(lancamentoRepo);
-        
         ListarLancamentosUseCase listarLancamentos =
                 new ListarLancamentosUseCase(lancamentoRepo, calculadora);
 
@@ -113,7 +108,8 @@ public class ApplicationBootstrap {
                 listarLancamentos,
                 validarMes,
                 removerLancamento,
-                removerServidor
+                removerServidor,
+                validador
         ));
     }
 
@@ -121,31 +117,40 @@ public class ApplicationBootstrap {
      * Cria views, controllers e a janela principal — tudo na EDT.
      */
     private void montarJanela(CadastrarServidorUseCase cadastrarServidor,
-        DesativarServidorUseCase desativarServidor,
-                            ListarServidoresUseCase listarServidores,
-                            RegistrarLancamentoUseCase registrarLancamento,
-                            ListarLancamentosUseCase listarLancamentos,
-                            ValidarMesUseCase validarMes, RemoverLancamentoUseCase removerLancamento,
-                            RemoverServidorUseCase removerServidor) {
+                              DesativarServidorUseCase desativarServidor,
+                              ListarServidoresUseCase listarServidores,
+                              RegistrarLancamentoUseCase registrarLancamento,
+                              ListarLancamentosUseCase listarLancamentos,
+                              ValidarMesUseCase validarMes,
+                              RemoverLancamentoUseCase removerLancamento,
+                              RemoverServidorUseCase removerServidor,
+                              ValidadorHorario validador) {
 
         TelaCadastroServidor telaServidores = new TelaCadastroServidor();
         TelaLancamento telaLancamentos = new TelaLancamento();
         TelaRelatorio telaRelatorio = new TelaRelatorio();
 
         // Controllers registram listeners nas views e ficam ativos enquanto
-        // as views existirem. A referência é descartada de propósito.
-        new ServidorController(telaServidores, cadastrarServidor, listarServidores, desativarServidor, removerServidor);
+        // as views existirem. A referência é descartada quando não é usada depois.
+        new ServidorController(telaServidores, cadastrarServidor, listarServidores,
+                desativarServidor, removerServidor);
 
-        LancamentoController lancamentoController = new LancamentoController(telaLancamentos,
-                registrarLancamento, listarServidores, listarLancamentos, removerLancamento);
-                
-        RelatorioController relatorioController = new RelatorioController(telaRelatorio,
-                listarServidores, validarMes);
+        LancamentoController lancamentoController = new LancamentoController(
+                telaLancamentos,
+                registrarLancamento,
+                removerLancamento,
+                listarServidores,
+                listarLancamentos,
+                validador
+        );
+
+        RelatorioController relatorioController = new RelatorioController(
+                telaRelatorio, listarServidores, validarMes);
 
         TelaPrincipal janela = new TelaPrincipal(telaServidores, telaLancamentos, telaRelatorio);
         janela.adicionarListenerMudancaAba(e -> {
-            lancamentoController.carregarServidores();
-            relatorioController.carregarServidores();
+            lancamentoController.recarregarServidores();
+            relatorioController.recarregarServidores();
         });
         janela.setVisible(true);
     }

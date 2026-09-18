@@ -117,7 +117,7 @@ public final class LancamentoController {
         view.getModeloTrechos().addTableModelListener(this::onTrechoAlterado);
 
         carregarMeses();
-        carregarServidores();
+        recarregarServidores();
         carregarLancamentos();
     }
 
@@ -298,7 +298,7 @@ public final class LancamentoController {
         }
     }
 
-    private void carregarServidores() {
+    public void recarregarServidores() {
         populando = true;
         try {
             List<ServidorDTO> servidores = listarServidores.executarApenasAtivos();

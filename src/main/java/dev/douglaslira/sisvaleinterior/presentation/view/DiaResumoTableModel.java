@@ -1,5 +1,6 @@
 package dev.douglaslira.sisvaleinterior.presentation.view;
 
+import dev.douglaslira.sisvaleinterior.application.dto.ResultadoTrechoDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.ResumoMensalDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.StatusDia;
 
@@ -11,7 +12,7 @@ import java.util.List;
 
 /**
  * Modelo de tabela para o relatório mensal — exibe cada dia do mês com
- * status, valor e motivos de validação.
+ * status, valor e um resumo dos trechos.
  *
  * <p>Consome diretamente o {@link ResumoMensalDTO.DiaResumoDTO} produzido
  * pelo domínio, sem recalcular nada.</p>
@@ -21,7 +22,7 @@ public class DiaResumoTableModel extends AbstractTableModel {
     private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final String[] COLUNAS = {
-            "Data", "Status", "Valor (R$)", "Motivo ida", "Motivo volta"
+            "Data", "Status", "Valor (R$)", "Trechos"
     };
 
     /** Índice da coluna Status — usado pela tela para aplicar o renderer. */
@@ -59,9 +60,8 @@ public class DiaResumoTableModel extends AbstractTableModel {
         return switch (columnIndex) {
             case 0 -> dia.data() == null ? "" : dia.data().format(FORMATO_DATA);
             case 1 -> dia.status();
-            case 2 -> formatarValor(dia.valor());
-            case 3 -> formatarMotivo(dia.motivoIda(), dia.diferencaIdaMinutos());
-            case 4 -> formatarMotivo(dia.motivoVolta(), dia.diferencaVoltaMinutos());
+            case 2 -> formatarValor(dia.valorTotalDia());
+            case 3 -> resumirTrechos(dia.resultados());
             default -> null;
         };
     }
@@ -98,17 +98,17 @@ public class DiaResumoTableModel extends AbstractTableModel {
     }
 
     /**
-     * Formata o motivo da validação, evitando repetir "Dentro da tolerância"
-     * quando o par está válido — nesse caso mostra só "—".
+     * Produz um resumo textual dos trechos — ex.: {@code "2/3 válidos"}.
+     * Se houver apenas 1 trecho, mostra {@code "válido"} ou {@code "inválido"}.
      */
-    private static String formatarMotivo(String motivo, long diferencaMinutos) {
-        if (motivo == null || motivo.isBlank()) {
-            return "";
+    private static String resumirTrechos(List<ResultadoTrechoDTO> resultados) {
+        if (resultados == null || resultados.isEmpty()) {
+            return "—";
         }
-        // Quando o par é válido, o motivo padrão é "Dentro da tolerância"
-        if (motivo.toLowerCase().contains("tolerância")) {
-            return "OK (" + diferencaMinutos + " min)";
+        long validos = resultados.stream().filter(ResultadoTrechoDTO::valido).count();
+        if (resultados.size() == 1) {
+            return validos == 1 ? "válido" : "inválido";
         }
-        return motivo;
+        return validos + "/" + resultados.size() + " válidos";
     }
 }

@@ -64,7 +64,7 @@ public final class RelatorioController {
 
         // Init
         carregarMeses();
-        carregarServidores();
+        recarregarServidores();
     }
 
     // Ações
@@ -103,7 +103,7 @@ public final class RelatorioController {
         view.setMesSelecionado(atual);
     }
 
-    public void carregarServidores() {
+    public void recarregarServidores() {
         try {
             List<ServidorDTO> servidores = listarServidores.executar();
             view.popularComboServidores(servidores);
