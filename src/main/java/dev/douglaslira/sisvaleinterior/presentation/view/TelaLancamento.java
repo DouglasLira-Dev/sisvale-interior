@@ -299,6 +299,19 @@ public class TelaLancamento extends JPanel {
         return modeloLancamentos.getLancamento(linhaModel);
     }
 
+    /**
+     * @return o {@link LancamentoComStatusDTO} da linha selecionada — com
+     *         status e lista de trechos; {@code null} se nada estiver selecionado
+     */
+    public LancamentoComStatusDTO getLancamentoComStatusSelecionado() {
+        int linhaView = tabelaLancamentos.getSelectedRow();
+        if (linhaView < 0) {
+            return null;
+        }
+        int linhaModel = tabelaLancamentos.convertRowIndexToModel(linhaView);
+        return modeloLancamentos.getLancamentoComStatus(linhaModel);
+    }
+
     // Listeners
     public void adicionarListenerSalvar(ActionListener listener) {
         botaoSalvar.addActionListener(listener);
@@ -326,6 +339,23 @@ public class TelaLancamento extends JPanel {
 
     public void adicionarListenerMesMudou(ActionListener listener) {
         comboMes.addActionListener(listener);
+    }
+
+    /**
+     * Registra um listener disparado ao dar duplo-clique em uma linha
+     * da tabela de lançamentos do mês.
+     *
+     * @param listener ação a executar (só dispara se houver linha selecionada)
+     */
+    public void adicionarListenerDuploCliqueLancamento(Runnable listener) {
+        tabelaLancamentos.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && tabelaLancamentos.getSelectedRow() >= 0) {
+                    listener.run();
+                }
+            }
+        });
     }
 
     // Diálogos

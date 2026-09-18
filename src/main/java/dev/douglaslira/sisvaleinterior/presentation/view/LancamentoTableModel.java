@@ -100,6 +100,19 @@ public class LancamentoTableModel extends AbstractTableModel {
         return linhas.get(rowIndex).lancamento();
     }
 
+    /**
+     * @param rowIndex índice da linha
+     * @return o {@link LancamentoComStatusDTO} da linha (com status e
+     *         lista de trechos), ou {@code null} se o índice for inválido
+     */
+    public LancamentoComStatusDTO getLancamentoComStatus(int rowIndex) {
+        if (rowIndex < 0 || rowIndex >= linhas.size()) {
+            return null;
+        }
+        return linhas.get(rowIndex);
+    }
+
+
     // Helpers
     private static String formatarValor(BigDecimal valor) {
         if (valor == null) {

@@ -22,6 +22,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -192,6 +194,19 @@ public class TelaRelatorio extends JPanel {
                 resumo.diasTotalmenteInvalidos()));
     }
 
+    /**
+     * @return o {@link ResumoMensalDTO.DiaResumoDTO} da linha selecionada,
+     *         ou {@code null} se nada estiver selecionado
+     */
+    public ResumoMensalDTO.DiaResumoDTO getDiaSelecionado() {
+        int linhaView = tabela.getSelectedRow();
+        if (linhaView < 0) {
+            return null;
+        }
+        int linhaModel = tabela.convertRowIndexToModel(linhaView);
+        return modeloTabela.getDia(linhaModel);
+    }
+
     public void adicionarListenerGerar(ActionListener listener) {
         botaoGerar.addActionListener(listener);
     }
@@ -202,6 +217,23 @@ public class TelaRelatorio extends JPanel {
 
     public void adicionarListenerMesMudou(ActionListener listener) {
         comboMes.addActionListener(listener);
+    }
+
+    /**
+     * Registra um listener disparado ao dar duplo-clique em uma linha
+     * da tabela de dias do relatório.
+     *
+     * @param listener ação a executar (só dispara se houver linha selecionada)
+     */
+    public void adicionarListenerDuploCliqueDia(Runnable listener) {
+        tabela.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && tabela.getSelectedRow() >= 0) {
+                    listener.run();
+                }
+            }
+        });
     }
 
     public void mostrarMensagem(String titulo, String mensagem) {

@@ -89,6 +89,18 @@ public class DiaResumoTableModel extends AbstractTableModel {
         fireTableDataChanged();
     }
 
+    /**
+     * @param rowIndex índice da linha
+     * @return o {@link ResumoMensalDTO.DiaResumoDTO} da linha, ou
+     *         {@code null} se o índice for inválido
+     */
+    public ResumoMensalDTO.DiaResumoDTO getDia(int rowIndex) {
+        if (rowIndex < 0 || rowIndex >= dias.size()) {
+            return null;
+        }
+        return dias.get(rowIndex);
+    }
+
     // Helpers
     private static String formatarValor(BigDecimal valor) {
         if (valor == null) {
