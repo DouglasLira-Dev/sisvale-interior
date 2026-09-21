@@ -178,6 +178,9 @@ public class TrechoTableModel extends AbstractTableModel {
 
     // Helpers
     private static LocalTime parseHora(Object value) {
+        if (value instanceof LocalTime lt){
+            return lt;
+        }
         if (value == null) {
             return null;
         }

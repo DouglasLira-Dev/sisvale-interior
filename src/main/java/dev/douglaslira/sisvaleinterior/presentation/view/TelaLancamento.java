@@ -8,6 +8,7 @@ import dev.douglaslira.sisvaleinterior.application.dto.TrechoDTO;
 import dev.douglaslira.sisvaleinterior.presentation.component.ButtonFactory;
 import dev.douglaslira.sisvaleinterior.presentation.component.StatusCellRenderer;
 import dev.douglaslira.sisvaleinterior.presentation.component.StatusTrechoCellRenderer;
+import dev.douglaslira.sisvaleinterior.presentation.component.TimeFieldCellEditor;
 import com.github.lgooddatepicker.components.DatePicker;
 import com.github.lgooddatepicker.components.DatePickerSettings;
 
@@ -126,6 +127,8 @@ public class TelaLancamento extends JPanel {
         tabelaTrechos.getColumnModel()
                 .getColumn(TrechoTableModel.COLUNA_STATUS)
                 .setCellRenderer(new StatusTrechoCellRenderer());
+        tabelaTrechos.getColumnModel().getColumn(1).setCellEditor(new TimeFieldCellEditor());
+        tabelaTrechos.getColumnModel().getColumn(2).setCellEditor(new TimeFieldCellEditor());
 
         painel.add(new JScrollPane(tabelaTrechos), BorderLayout.CENTER);
 
