@@ -64,6 +64,13 @@ public final class LancamentoController {
     private boolean atualizandoStatus = false;
 
     /**
+     * Flag que evita loop infinito quando {@code view.limparFormulario()} é
+     * chamado: o {@code TrechoTableModel.limpar()} dispara
+     * {@code fireTableDataChanged()}, que reentraria em {@code onTrechoAlterado}.
+     */
+    private boolean limpando = false;
+
+    /**
      * @param view              tela de lançamentos (não pode ser nula)
      * @param registrar         caso de uso de registro (não pode ser nulo)
      * @param remover           caso de uso de remoção (não pode ser nulo)
@@ -146,7 +153,12 @@ public final class LancamentoController {
     }
 
     private void onCancelar() {
-        view.limparFormulario();
+        limpando = true;
+        try {
+            view.limparFormulario();
+        } finally {
+            limpando = false;
+        }
         view.atualizarTotalDia(BigDecimal.ZERO);
     }
 
@@ -159,8 +171,8 @@ public final class LancamentoController {
      * recalcula o total do dia.</p>
      */
     private void onTrechoAlterado(TableModelEvent e) {
-        if (atualizandoStatus) {
-            return;   // ignora o evento que nós mesmos disparamos
+        if (atualizandoStatus || limpando) {
+            return;   // ignora eventos enquanto Limpamos ou atualizamos status
         }
 
         int primeira = e.getFirstRow();
@@ -249,7 +261,14 @@ public final class LancamentoController {
 
         try {
             registrar.executar(servidorId, data, trechos);
-            view.limparFormulario();
+
+            limpando = true;
+            try {
+                view.limparFormulario();
+            } finally {
+                limpando = false;
+            }
+
             view.atualizarTotalDia(BigDecimal.ZERO);
             carregarLancamentos();
             view.mostrarMensagem("Sucesso", "Lançamento registrado.");
