@@ -6,9 +6,10 @@ import dev.douglaslira.sisvaleinterior.application.dto.ResultadoTrechoDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.ServidorDTO;
 import dev.douglaslira.sisvaleinterior.application.dto.TrechoDTO;
 import dev.douglaslira.sisvaleinterior.presentation.component.ButtonFactory;
-import dev.douglaslira.sisvaleinterior.presentation.component.DateField;
 import dev.douglaslira.sisvaleinterior.presentation.component.StatusCellRenderer;
 import dev.douglaslira.sisvaleinterior.presentation.component.StatusTrechoCellRenderer;
+import com.github.lgooddatepicker.components.DatePicker;
+import com.github.lgooddatepicker.components.DatePickerSettings;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
@@ -28,6 +29,7 @@ import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionListener;
+import java.awt.Color;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -56,7 +58,7 @@ public class TelaLancamento extends JPanel {
     private final JComboBox<YearMonth> comboMes = new JComboBox<>();
 
     // Formulário — data + tabela de trechos editável
-    private final DateField campoData = new DateField();
+    private final DatePicker campoData = criarDatePicker();
     private final TrechoTableModel modeloTrechos = new TrechoTableModel();
     private final JTable tabelaTrechos = new JTable(modeloTrechos);
 
@@ -211,6 +213,33 @@ public class TelaLancamento extends JPanel {
         labelTotalDia.setHorizontalAlignment(SwingConstants.RIGHT);
     }
 
+    /**
+     * Cria o DatePicker com locale PT-BR e configurações visuais
+     * compatíveis com o tema dark do FlatLaf.
+     */
+    private static DatePicker criarDatePicker() {
+        DatePickerSettings settings = new DatePickerSettings(Locale.of("pt", "BR"));
+        settings.setFormatForDatesCommonEra("dd/MM/yyyy");
+        settings.setFormatForDatesBeforeCommonEra("dd/MM/yyyy");
+        settings.setAllowEmptyDates(true);
+
+        // Ajustes de cor para o tema dark
+        settings.setColor(DatePickerSettings.DateArea.BackgroundMonthAndYearMenuLabels,
+                new Color(0x1E, 0x1E, 0x1E));
+        settings.setColor(DatePickerSettings.DateArea.BackgroundTodayLabel,
+                new Color(0x1E, 0x1E, 0x1E));
+        settings.setColor(DatePickerSettings.DateArea.BackgroundClearLabel,
+                new Color(0x1E, 0x1E, 0x1E));
+        settings.setColor(DatePickerSettings.DateArea.BackgroundCalendarPanelLabelsOnHover,
+                new Color(0x4A, 0x90, 0xE2));
+        settings.setColor(DatePickerSettings.DateArea.TextFieldBackgroundValidDate,
+                Color.WHITE);
+        settings.setColor(DatePickerSettings.DateArea.TextFieldBackgroundInvalidDate,
+                new Color(0xFF, 0xCC, 0xCC));
+
+        return new DatePicker(settings);
+    }
+
     // API para o controller
     public Long getServidorSelecionadoId() {
         ServidorDTO dto = (ServidorDTO) comboServidor.getSelectedItem();
@@ -226,11 +255,11 @@ public class TelaLancamento extends JPanel {
     }
 
     public LocalDate getData() {
-        return campoData.getData();
+        return campoData.getDate();
     }
 
     public void setData(LocalDate data) {
-        campoData.setData(data);
+        campoData.setDate(data);
     }
 
     public List<TrechoDTO> getTrechos() {
@@ -266,7 +295,7 @@ public class TelaLancamento extends JPanel {
     }
 
     public void limparFormulario() {
-        campoData.setText("");
+        campoData.clear();
         modeloTrechos.limpar();
         atualizarTotalDia(BigDecimal.ZERO);
         campoData.requestFocusInWindow();
