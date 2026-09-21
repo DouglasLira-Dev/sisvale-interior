@@ -181,12 +181,35 @@ public class TrechoTableModel extends AbstractTableModel {
         if (value == null) {
             return null;
         }
-        String texto = value.toString().trim();
+        String texto = value.toString().trim().replace(":", "");
         if (texto.isEmpty()) {
             return null;
         }
+        // aceita só dígitos
+        if(!texto.matches("\\d+")){
+            return null;
+        }
+        int hora;
+        int minuto;
         try {
-            return LocalTime.parse(texto, FORMATO_HORA);
+            switch (texto.length()){
+                case 4 -> {
+                    hora = Integer.parseInt(texto.substring(0, 2));
+                    minuto = Integer.parseInt(texto.substring(2,4));
+                }
+                case 3 -> {
+                    hora = Integer.parseInt(texto.substring(0, 1));
+                    minuto = Integer.parseInt(texto.substring(1,3));
+                }
+                case 2 -> {
+                    hora = Integer.parseInt(texto);
+                    minuto = 0;
+                }
+                default -> {
+                    return null;
+                }
+            }
+            return LocalTime.of(hora, minuto);
         } catch (Exception e) {
             return null;
         }
